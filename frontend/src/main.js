@@ -117,6 +117,15 @@ function initCardResize() {
       currentH = h || 2
     }
     
+    // Get minimum size for this card type
+    let minW = 2, minH = 2
+    const minSizeAttr = card.dataset.minSize
+    if (minSizeAttr && minSizeAttr.includes('x')) {
+      const [w, h] = minSizeAttr.split('x').map(Number)
+      minW = w || 2
+      minH = h || 2
+    }
+    
     const startW = currentW
     const startH = currentH
     
@@ -135,9 +144,9 @@ function initCardResize() {
       let newW = Math.round(startW + deltaX / GRID_SIZE)
       let newH = Math.round(startH + deltaY / GRID_SIZE)
       
-      // Minimum 2x2, maximum 12x8
-      newW = Math.max(2, Math.min(12, newW))
-      newH = Math.max(2, Math.min(8, newH))
+      // Clamp to min/max per card type
+      newW = Math.max(minW, Math.min(12, newW))
+      newH = Math.max(minH, Math.min(8, newH))
       
       if (newW !== currentW || newH !== currentH) {
         currentW = newW
