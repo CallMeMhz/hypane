@@ -8,6 +8,7 @@ import uuid
 import json
 
 from app.services.dashboard import get_dashboard, save_dashboard
+from app.services.snapshots import create_snapshot, get_changelog, get_snapshot
 
 router = APIRouter(prefix="/api/cards", tags=["cards"])
 
@@ -94,6 +95,14 @@ async def create_card(request: CreateCardRequest):
     dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
     save_dashboard(dashboard)
     
+    # Create snapshot
+    create_snapshot(
+        dashboard, 
+        action="create",
+        details=f"Created {request.type} card: {request.title}",
+        card_id=card_id
+    )
+    
     return new_card
 
 
@@ -105,6 +114,7 @@ async def update_card(card_id: str, request: UpdateCardRequest):
     for card in dashboard.get("cards", []):
         if card["id"] == card_id:
             now = datetime.now(timezone.utc)
+            old_title = card.get("title")
             
             if request.title is not None:
                 card["title"] = request.title
@@ -126,6 +136,15 @@ async def update_card(card_id: str, request: UpdateCardRequest):
             card["updatedAt"] = now.isoformat().replace("+00:00", "Z")
             dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
             save_dashboard(dashboard)
+            
+            # Create snapshot
+            create_snapshot(
+                dashboard,
+                action="update", 
+                details=f"Updated card: {card.get('title', old_title)}",
+                card_id=card_id
+            )
+            
             return card
     
     raise HTTPException(status_code=404, detail="Card not found")
@@ -137,15 +156,28 @@ async def delete_card(card_id: str):
     dashboard = get_dashboard()
     
     cards = dashboard.get("cards", [])
-    original_len = len(cards)
-    dashboard["cards"] = [c for c in cards if c["id"] != card_id]
+    deleted_card = None
+    for c in cards:
+        if c["id"] == card_id:
+            deleted_card = c
+            break
     
-    if len(dashboard["cards"]) == original_len:
+    if not deleted_card:
         raise HTTPException(status_code=404, detail="Card not found")
+    
+    dashboard["cards"] = [c for c in cards if c["id"] != card_id]
     
     now = datetime.now(timezone.utc)
     dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
     save_dashboard(dashboard)
+    
+    # Create snapshot
+    create_snapshot(
+        dashboard,
+        action="delete",
+        details=f"Deleted card: {deleted_card.get('title')} ({deleted_card.get('type')})",
+        card_id=card_id
+    )
     
     return {"deleted": card_id}
 
@@ -187,7 +219,9 @@ async def merge_cards(request: MergeCardsRequest):
     
     # Collect items
     items = []
+    merged_titles = []
     for card in to_merge:
+        merged_titles.append(card.get("title", card["id"]))
         content = card.get("content", {})
         if "items" in content:
             items.extend(content["items"])
@@ -214,5 +248,13 @@ async def merge_cards(request: MergeCardsRequest):
     dashboard["cards"] = remaining
     dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
     save_dashboard(dashboard)
+    
+    # Create snapshot
+    create_snapshot(
+        dashboard,
+        action="merge",
+        details=f"Merged {len(to_merge)} cards into: {request.title}",
+        card_id=merged_card["id"]
+    )
     
     return merged_card

@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 
 from app.config import PI_COMMAND, SYSTEM_SKILL, SESSIONS_DIR, DASHBOARD_EXTENSION
 
@@ -57,24 +57,35 @@ async def run_agent_chat(message: str) -> dict:
         }
 
 
-async def run_agent_stream(message: str) -> AsyncIterator[str]:
+async def run_agent_stream(message: str, session_id: Optional[str] = None) -> AsyncIterator[str]:
     """
     Stream agent response using pi --mode json (JSONL streaming).
+    
+    Each web session gets its own session file for conversation continuity,
+    but the agent can use dashboard_changelog tool to see history.
     """
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     
-    session_file = SESSIONS_DIR / "chat-debug.jsonl"
+    # Use provided session_id or create a temporary one
+    if session_id:
+        session_file = SESSIONS_DIR / f"web-{session_id}.jsonl"
+    else:
+        # No session - each request is independent
+        session_file = None
 
     cmd = [
         PI_COMMAND,
         "-p", message,
         "--skill", str(SYSTEM_SKILL),
         "-e", str(DASHBOARD_EXTENSION),
-        "--session", str(session_file),
         "--mode", "json",
     ]
     
-    print(f"[DEBUG] Running pi", file=sys.stderr)
+    # Only add session if provided
+    if session_file:
+        cmd.extend(["--session", str(session_file)])
+    
+    print(f"[DEBUG] Running pi (session: {session_file})", file=sys.stderr)
 
     # 使用更大的 limit 来处理长行
     process = await asyncio.create_subprocess_exec(

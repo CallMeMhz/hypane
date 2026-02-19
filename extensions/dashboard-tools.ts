@@ -6,7 +6,6 @@
  */
 
 import { Type } from "@sinclair/typebox";
-import { StringEnum } from "@mariozechner/pi-ai";
 
 const DASHBOARD_API = process.env.DASHBOARD_API || "http://localhost:8000";
 
@@ -16,7 +15,7 @@ export default function (pi: any) {
   pi.registerTool({
     name: "dashboard_list_cards",
     label: "List Dashboard Cards",
-    description: "List all cards currently on the dashboard. Returns card IDs, types, titles, and summaries.",
+    description: "List all cards currently on the dashboard. Returns card IDs, types, titles.",
     parameters: Type.Object({}),
 
     async execute() {
@@ -73,16 +72,16 @@ export default function (pi: any) {
     name: "dashboard_create_card",
     label: "Create Dashboard Card",
     description: `Create a new card on the dashboard.
-You can use any type name. Common types include: weather, todo, news-bundle, crypto, crypto-bundle, reminder.
-You can also create new types - use content.html for custom HTML rendering.
-Title can have custom colors via titleColor (CSS color) or titleClass (Tailwind classes).`,
+You can use any type name. Common types: weather, todo, news-bundle, crypto, crypto-bundle, reminder.
+Use content.html for custom HTML rendering with Tailwind CSS.
+Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     parameters: Type.Object({
       type: Type.String({ description: "Card type (e.g. weather, todo, crypto, or any custom type)" }),
       title: Type.String({ description: "Card title" }),
       content: Type.Any({ description: "Card content. Use {html: '...'} for custom HTML rendering" }),
       size: Type.Optional(Type.String({ description: "Card size: small, medium, or large" })),
-      titleColor: Type.Optional(Type.String({ description: "Title color as CSS value (e.g. '#ff6b6b', 'rgb(255,0,0)')" })),
-      titleClass: Type.Optional(Type.String({ description: "Title CSS classes (e.g. 'text-pink-500', 'bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent')" })),
+      titleColor: Type.Optional(Type.String({ description: "Title color as CSS value" })),
+      titleClass: Type.Optional(Type.String({ description: "Title CSS classes" })),
     }),
 
     async execute(_toolCallId: string, params: { type: string; title: string; content: any; size?: string; titleColor?: string; titleClass?: string }) {
@@ -225,5 +224,80 @@ Title can have custom colors via titleColor (CSS color) or titleClass (Tailwind 
     },
   });
 
-  console.error("[Dashboard Extension] Registered 6 tools: dashboard_list_cards, dashboard_get_card, dashboard_create_card, dashboard_update_card, dashboard_delete_card, dashboard_merge_cards");
+  // Tool: Get changelog
+  pi.registerTool({
+    name: "dashboard_changelog",
+    label: "Dashboard Changelog",
+    description: "View recent changes to the dashboard. Shows what cards were created, updated, deleted, or merged.",
+    parameters: Type.Object({
+      limit: Type.Optional(Type.Number({ description: "Number of entries to return (default 10)" })),
+    }),
+
+    async execute(_toolCallId: string, params: { limit?: number }) {
+      try {
+        const limit = params.limit || 10;
+        const response = await fetch(`${DASHBOARD_API}/api/changelog?limit=${limit}`);
+        
+        if (!response.ok) {
+          const error = await response.text();
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
+        }
+        
+        const entries = await response.json();
+        
+        if (entries.length === 0) {
+          return { content: [{ type: "text", text: "No changes recorded yet." }] };
+        }
+        
+        const summary = entries.map((e: any) => {
+          const time = e.timestamp.replace("T", " ").replace("Z", "");
+          return `- [${e.id}] ${time} | ${e.action}: ${e.details || e.cardId || ""}`;
+        }).join("\n");
+        
+        return {
+          content: [{ type: "text", text: `Recent changes:\n${summary}` }],
+          details: { entries },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  // Tool: Get snapshot
+  pi.registerTool({
+    name: "dashboard_snapshot",
+    label: "View Dashboard Snapshot",
+    description: "View the dashboard state at a specific point in time. Use dashboard_changelog to find snapshot IDs.",
+    parameters: Type.Object({
+      snapshotId: Type.String({ description: "The snapshot ID from changelog" }),
+    }),
+
+    async execute(_toolCallId: string, params: { snapshotId: string }) {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/snapshots/${params.snapshotId}`);
+        
+        if (!response.ok) {
+          const error = await response.text();
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
+        }
+        
+        const snapshot = await response.json();
+        const cards = snapshot.cards || [];
+        
+        const summary = cards.map((c: any) => 
+          `- [${c.id}] ${c.type}: ${c.title}`
+        ).join("\n");
+        
+        return {
+          content: [{ type: "text", text: `Snapshot ${params.snapshotId} (${cards.length} cards):\n${summary}` }],
+          details: { snapshot },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  console.error("[Dashboard Extension] Registered 8 tools");
 }

@@ -24,6 +24,11 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
+// Generate a simple session ID
+function generateSessionId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
+}
+
 // Insert card reference to chat input
 window.insertCardToChat = function(cardId, cardTitle, cardType) {
   const chatBoxEl = document.querySelector('[x-data="chatBox"]')
@@ -47,6 +52,7 @@ Alpine.data('chatBox', () => ({
   loading: false,
   currentMessageIndex: -1,
   cardRefs: [], // [{id, title}, ...]
+  sessionId: generateSessionId(), // Unique session for this browser tab
 
   toggle() {
     this.open = !this.open
@@ -107,7 +113,12 @@ Alpine.data('chatBox', () => ({
     this.currentMessageIndex = -1
 
     try {
-      const response = await fetch('/chat/stream?' + new URLSearchParams({ message: userMessage }))
+      // Include session_id for conversation continuity within this tab
+      const params = new URLSearchParams({ 
+        message: userMessage,
+        session_id: this.sessionId
+      })
+      const response = await fetch('/chat/stream?' + params)
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
