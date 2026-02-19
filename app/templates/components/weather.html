@@ -1,6 +1,6 @@
 <!-- Weather Card Content -->
 <div class="flex items-center gap-4">
-  <div class="text-4xl">
+  <div class="text-3xl">
     {% set condition = card.content.condition | default('晴') %}
     {% if '晴' in condition %}☀️
     {% elif '云' in condition %}⛅
@@ -10,16 +10,16 @@
     {% endif %}
   </div>
   <div>
-    <div class="text-2xl font-bold text-gray-800">
+    <div class="text-xl font-medium text-gray-800 dark:text-gray-100">
       {{ card.content.temperature }}
     </div>
-    <div class="text-gray-500">
+    <div class="text-sm text-gray-500 dark:text-gray-500">
       {{ card.content.location }} · {{ card.content.condition }}
     </div>
   </div>
 </div>
 {% if card.content.forecast %}
-<div class="mt-3 text-sm text-gray-500">
+<div class="mt-3 text-sm text-gray-400 dark:text-gray-500">
   {{ card.content.forecast }}
 </div>
 {% endif %}

@@ -5,28 +5,104 @@ import './styles/main.css'
 import htmx from 'htmx.org'
 window.htmx = htmx
 
+// Markdown
+import { marked } from 'marked'
+
+// Configure marked for safe rendering
+marked.setOptions({
+  breaks: true,  // Convert \n to <br>
+  gfm: true,     // GitHub Flavored Markdown
+})
+
 // Alpine.js
 import Alpine from 'alpinejs'
 window.Alpine = Alpine
 
+// Render markdown to HTML
+window.renderMarkdown = function(text) {
+  if (!text) return ''
+  return marked.parse(text)
+}
+
+// Insert card reference to chat input
+window.insertCardToChat = function(cardId, cardTitle, cardType) {
+  const chatBoxEl = document.querySelector('[x-data="chatBox"]')
+  if (!chatBoxEl) return
+  
+  const chatBox = Alpine.$data(chatBoxEl)
+  
+  // Open chat if not open
+  if (!chatBox.open) {
+    chatBox.open = true
+  }
+  
+  // Add card reference
+  chatBox.addCardRef(cardId, cardTitle)
+}
+
 // Alpine components
 Alpine.data('chatBox', () => ({
   open: false,
-  message: '',
   messages: [],
   loading: false,
   currentMessageIndex: -1,
+  cardRefs: [], // [{id, title}, ...]
 
   toggle() {
     this.open = !this.open
   },
 
-  async send() {
-    if (!this.message.trim() || this.loading) return
+  addCardRef(cardId, cardTitle) {
+    // Avoid duplicates
+    if (!this.cardRefs.find(c => c.id === cardId)) {
+      this.cardRefs.push({ id: cardId, title: cardTitle })
+    }
+    // Focus input after a short delay
+    setTimeout(() => {
+      const input = this.$refs.messageInput
+      if (input) input.focus()
+    }, 50)
+  },
 
-    const userMessage = this.message
-    this.messages.push({ role: 'user', content: userMessage })
-    this.message = ''
+  removeCardRef(cardId) {
+    this.cardRefs = this.cardRefs.filter(c => c.id !== cardId)
+  },
+
+  getInputText() {
+    const input = this.$refs.messageInput
+    return input ? input.innerText.trim() : ''
+  },
+
+  clearInput() {
+    const input = this.$refs.messageInput
+    if (input) input.innerText = ''
+  },
+
+  renderMd(text) {
+    return window.renderMarkdown(text)
+  },
+
+  async send() {
+    const text = this.getInputText()
+    if ((!text && this.cardRefs.length === 0) || this.loading) return
+
+    // Build message with card references
+    let userMessage = ''
+    if (this.cardRefs.length > 0) {
+      const refs = this.cardRefs.map(c => `[${c.title}](${c.id})`).join(' ')
+      userMessage = refs + (text ? ' ' + text : '')
+    } else {
+      userMessage = text
+    }
+
+    // Display message in chat
+    const displayMessage = this.cardRefs.length > 0 
+      ? this.cardRefs.map(c => `📌${c.title}`).join(' ') + (text ? ' ' + text : '')
+      : text
+
+    this.messages.push({ role: 'user', content: displayMessage })
+    this.clearInput()
+    this.cardRefs = []
     this.loading = true
     this.currentMessageIndex = -1
 
@@ -67,16 +143,21 @@ Alpine.data('chatBox', () => ({
     }
   },
 
+  handleKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      this.send()
+    }
+  },
+
   handleEvent(event) {
     switch (event.type) {
       case 'message_start':
-        // 新消息开始（只有有内容时才会收到这个事件）
         this.messages.push({ role: 'assistant', content: '' })
         this.currentMessageIndex = this.messages.length - 1
         break
         
       case 'delta':
-        // 文本增量
         if (this.currentMessageIndex >= 0 && this.messages[this.currentMessageIndex]) {
           this.messages[this.currentMessageIndex].content += event.content
         }
@@ -84,18 +165,20 @@ Alpine.data('chatBox', () => ({
         break
         
       case 'message_end':
-        // 消息结束，重置当前消息索引
         this.currentMessageIndex = -1
         break
         
       case 'tool_start':
-        // 工具调用，显示为小标签
         let toolDisplay = event.tool
         if (event.args) {
           if (event.args.command) {
             toolDisplay += `: ${event.args.command}`
           } else if (event.args.path) {
             toolDisplay += `: ${event.args.path}`
+          } else if (event.args.cardId) {
+            toolDisplay += `: ${event.args.cardId}`
+          } else if (event.args.type) {
+            toolDisplay += `: ${event.args.type}`
           }
         }
         this.messages.push({ 
@@ -107,7 +190,6 @@ Alpine.data('chatBox', () => ({
         break
         
       case 'tool_end':
-        // 工具完成，更新最近的同名工具消息状态
         for (let i = this.messages.length - 1; i >= 0; i--) {
           if (this.messages[i].role === 'tool' && this.messages[i].status === 'running') {
             this.messages[i].status = event.isError ? 'error' : 'done'
@@ -117,7 +199,6 @@ Alpine.data('chatBox', () => ({
         break
         
       case 'done':
-        // Agent 完成
         if (event.dashboardUpdated) {
           this.refreshDashboard()
         }

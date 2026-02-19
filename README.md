@@ -88,4 +88,5 @@ ai-dashboard/
 
 ## 文档
 
-详细设计方案见 [PLAN.md](PLAN.md)
+- [PLAN.md](PLAN.md) - 详细设计方案
+- [docs/DESIGN.md](docs/DESIGN.md) - UI 设计规范

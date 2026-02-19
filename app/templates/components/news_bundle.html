@@ -1,10 +1,10 @@
 <!-- News Bundle Card Content -->
 <div class="space-y-3">
   {% for item in card.content["items"] %}
-  <div class="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-    <h4 class="font-medium text-gray-800 text-sm">
+  <div class="border-b border-gray-100 dark:border-gray-800 pb-3 last:border-0 last:pb-0">
+    <h4 class="text-sm text-gray-700 dark:text-gray-200">
       {% if item.url %}
-      <a href="{{ item.url }}" target="_blank" class="hover:text-sky-500">
+      <a href="{{ item.url }}" target="_blank" class="hover:text-gray-900 dark:hover:text-white transition-colors">
         {{ item.title }}
       </a>
       {% else %}
@@ -12,7 +12,7 @@
       {% endif %}
     </h4>
     {% if item.summary %}
-    <p class="text-gray-500 text-xs mt-1">{{ item.summary }}</p>
+    <p class="text-gray-400 dark:text-gray-500 text-xs mt-1">{{ item.summary }}</p>
     {% endif %}
   </div>
   {% endfor %}

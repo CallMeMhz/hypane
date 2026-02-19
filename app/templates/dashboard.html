@@ -1,27 +1,27 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 pb-24">
+<div class="container mx-auto px-6 py-8 pb-24">
   <!-- Header -->
-  <header class="mb-8 flex items-center justify-between">
+  <header class="mb-10 flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">AI Dashboard</h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">你的个人智能助理</p>
+      <h1 class="text-2xl font-medium text-gray-800 dark:text-gray-100 tracking-tight">Dashboard</h1>
+      <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Personal assistant</p>
     </div>
     
     <!-- Theme Toggle -->
     <button 
       onclick="toggleTheme()"
-      class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-      title="切换主题"
+      class="p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+      title="Toggle theme"
     >
       <!-- Sun icon (shown in dark mode) -->
-      <svg class="w-6 h-6 text-yellow-500 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      <svg class="w-5 h-5 text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
       <!-- Moon icon (shown in light mode) -->
-      <svg class="w-6 h-6 text-gray-700 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      <svg class="w-5 h-5 text-gray-400 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
       </svg>
     </button>
   </header>
@@ -34,9 +34,9 @@
     {% for card in cards %}
       {% include "partials/card.html" %}
     {% else %}
-      <div class="col-span-full text-center text-gray-400 dark:text-gray-500 py-12">
-        <p class="text-lg">还没有卡片</p>
-        <p class="text-sm mt-2">通过下方聊天框和 AI 助理对话，开始添加内容吧</p>
+      <div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+        <p class="text-sm">No cards yet</p>
+        <p class="text-xs mt-2 text-gray-400 dark:text-gray-500">Chat with the assistant to get started</p>
       </div>
     {% endfor %}
   </div>
