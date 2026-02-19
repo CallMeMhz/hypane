@@ -3,6 +3,11 @@
  * 
  * 只提供 Dashboard 卡片管理的核心工具。
  * 数据采集、信源管理等通过 Skill + 文件操作完成。
+ * 
+ * Grid System:
+ * - 80px grid units
+ * - Size format: "WxH" (e.g., "3x2" = 3 cols × 2 rows = 240px × 160px)
+ * - Position format: {x, y} grid coordinates (0-indexed)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -15,7 +20,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "dashboard_list_cards",
     label: "List Dashboard Cards",
-    description: "List all cards on the dashboard with their IDs and types.",
+    description: "List all cards on the dashboard with their IDs, types, sizes and positions.",
     parameters: Type.Object({}),
 
     async execute() {
@@ -28,7 +33,11 @@ export default function (pi: ExtensionAPI) {
         }
 
         const summary = cards
-          .map((c: any) => `- [${c.id}] ${c.type}: ${c.title || "(no title)"}`)
+          .map((c: any) => {
+            const pos = c.position || {};
+            const posStr = pos.x !== undefined ? `@(${pos.x},${pos.y})` : '';
+            return `- [${c.id}] ${c.type} ${c.size || '3x2'} ${posStr}: ${c.title || "(no title)"}`;
+          })
           .join("\n");
 
         return {
@@ -71,13 +80,24 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "dashboard_create_card",
     label: "Create Dashboard Card",
-    description: `Create a new card. Types: weather, todo, countdown, reminder, news-bundle, crypto-bundle, or custom (use content.html).`,
+    description: `Create a new card on the dashboard.
+    
+Types: weather, todo, countdown, reminder, news-bundle, crypto-bundle, or custom (use content.html).
+
+Size format: "WxH" where W=columns(1-12), H=rows(1-8). Each unit is 80px.
+Examples: "3x2" (default, 240×160px), "4x3" (320×240px), "6x2" (wide), "3x4" (tall)
+
+Position format: {x, y} grid coordinates. {x:0, y:0} is top-left.
+Cards can overlap like sticky notes on a board.`,
     parameters: Type.Object({
       type: Type.String({ description: "Card type" }),
       title: Type.String({ description: "Card title" }),
       content: Type.Any({ description: "Card content (type-specific)" }),
-      size: Type.Optional(Type.String({ description: "small | medium | large" })),
-      position: Type.Optional(Type.Number({ description: "Position index" })),
+      size: Type.Optional(Type.String({ description: 'Grid size "WxH", e.g. "3x2", "4x3", "6x2"' })),
+      position: Type.Optional(Type.Object({
+        x: Type.Number({ description: "Column position (0-indexed)" }),
+        y: Type.Number({ description: "Row position (0-indexed)" }),
+      })),
     }),
 
     async execute(_toolCallId: string, params: any) {
@@ -89,7 +109,7 @@ export default function (pi: ExtensionAPI) {
         });
         const card = await response.json();
         return {
-          content: [{ type: "text", text: `Created card: ${card.id} (${card.type})` }],
+          content: [{ type: "text", text: `Created card: ${card.id} (${card.type}) size=${card.size}` }],
           details: { card },
         };
       } catch (error) {
@@ -102,28 +122,30 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "dashboard_update_card",
     label: "Update Dashboard Card",
-    description: "Update a card's properties. Size options: small (1 col), medium (2 col), large (3 col), full (100% width). Use position to reorder.",
+    description: `Update a card's properties.
+
+Size: "WxH" format (e.g., "3x2", "6x3")
+Position: {x, y} grid coordinates to move the card`,
     parameters: Type.Object({
       cardId: Type.String({ description: "Card ID to update" }),
-      updates: Type.Any({ description: "Fields: size (small/medium/large/full), position (number), title, content, etc" }),
+      updates: Type.Object({
+        title: Type.Optional(Type.String({ description: "New title" })),
+        content: Type.Optional(Type.Any({ description: "New content" })),
+        size: Type.Optional(Type.String({ description: 'Grid size "WxH"' })),
+        position: Type.Optional(Type.Object({
+          x: Type.Number({ description: "Column position" }),
+          y: Type.Number({ description: "Row position" }),
+        })),
+        type: Type.Optional(Type.String({ description: "Card type" })),
+      }),
     }),
 
     async execute(_toolCallId: string, params: { cardId: string; updates: any }) {
       try {
-        // Ensure updates is an object (handle string input)
-        let updates = params.updates;
-        if (typeof updates === "string") {
-          try {
-            updates = JSON.parse(updates);
-          } catch {
-            // keep as-is if not valid JSON
-          }
-        }
-        
         const response = await fetch(`${DASHBOARD_API}/api/cards/${params.cardId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
+          body: JSON.stringify(params.updates),
         });
 
         if (!response.ok) {
@@ -270,36 +292,5 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
-  // Tool: Reorder cards
-  pi.registerTool({
-    name: "dashboard_reorder_cards",
-    label: "Reorder Dashboard Cards",
-    description: "Reorder all cards by providing card IDs in the desired display order. This is the best way to rearrange the dashboard layout.",
-    parameters: Type.Object({
-      cardIds: Type.Array(Type.String(), { description: "Card IDs in desired order (first = top-left)" }),
-    }),
-
-    async execute(_toolCallId: string, params: { cardIds: string[] }) {
-      try {
-        const response = await fetch(`${DASHBOARD_API}/api/cards/reorder`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cardIds: params.cardIds }),
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error: ${error}` }] };
-        }
-
-        return {
-          content: [{ type: "text", text: `Reordered ${params.cardIds.length} cards successfully.` }],
-        };
-      } catch (error) {
-        return { content: [{ type: "text", text: `Error: ${error}` }] };
-      }
-    },
-  });
-
-  console.error("[Dashboard Extension] Registered 9 tools");
+  console.error("[Dashboard Extension] Registered 8 tools");
 }

@@ -17,7 +17,8 @@ class CreateCardRequest(BaseModel):
     type: str
     title: str
     content: Any
-    size: str = "medium"
+    size: str = "3x2"  # Grid size "WxH"
+    position: Optional[dict] = None  # {x, y} grid position
     titleColor: Optional[str] = None
     titleClass: Optional[str] = None
 
@@ -68,9 +69,6 @@ async def create_card(request: CreateCardRequest):
     timestamp = now.strftime("%Y%m%d%H%M%S")
     card_id = f"{request.type}-{timestamp}-{uuid.uuid4().hex[:4]}"
     
-    # Determine position
-    max_order = max((c.get("position", {}).get("order", 0) for c in dashboard.get("cards", [])), default=0)
-    
     # Normalize content - parse JSON string if needed
     content = request.content
     if isinstance(content, str):
@@ -79,12 +77,30 @@ async def create_card(request: CreateCardRequest):
         except json.JSONDecodeError:
             pass
     
+    # Position: use provided or find next available spot
+    position = request.position
+    if not position:
+        # Find a free spot (simple: stack vertically)
+        existing_cards = dashboard.get("cards", [])
+        max_y = 0
+        for c in existing_cards:
+            pos = c.get("position", {})
+            size = c.get("size", "3x2")
+            if "x" in size:
+                h = int(size.split("x")[1])
+            else:
+                h = 2
+            card_bottom = pos.get("y", 0) + h
+            if card_bottom > max_y:
+                max_y = card_bottom
+        position = {"x": 0, "y": max_y}
+    
     new_card = {
         "id": card_id,
         "type": request.type,
         "title": request.title,
         "content": content,
-        "position": {"order": max_order + 1},
+        "position": position,
         "size": request.size,
         "createdAt": now.isoformat().replace("+00:00", "Z"),
         "updatedAt": now.isoformat().replace("+00:00", "Z"),
