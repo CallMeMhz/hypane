@@ -1,0 +1,88 @@
+/**
+ * Kabadoni Theme for Dashboard
+ * Based on: https://github.com/nickberckley/kabadoni
+ */
+
+/* ===== Color Variables ===== */
+:root {
+  /* Dark mode colors */
+  --kb-dark-bg-1: #1e1e1e;
+  --kb-dark-bg-2: #252526;
+  --kb-dark-bg-3: #333333;
+  --kb-dark-bg-4: #3c3c3c;
+  --kb-dark-bg-5: #474747;
+  --kb-dark-bg-6: #505050;
+  
+  /* Light mode colors */
+  --kb-light-bg-1: #ebe0d8;
+  --kb-light-bg-2: #e3d6cc;
+  --kb-light-bg-3: #d2c6bc;
+  --kb-light-bg-4: #b9aea5;
+  
+  /* White text (for dark mode) */
+  --kb-white-text-1: #e6e6e6;
+  --kb-white-text-2: #dedede;
+  --kb-white-text-3: #c9c9c9;
+  --kb-white-text-4: #a3a3a3;
+  --kb-white-text-5: #848484;
+  --kb-white-text-6: #505050;
+  
+  /* Black text (for light mode) */
+  --kb-black-text-1: #000000;
+  --kb-black-text-2: #1e1e1e;
+  --kb-black-text-3: #404040;
+  --kb-black-text-4: #535353;
+  
+  /* Accent colors */
+  --kb-blue: #586f86;
+  --kb-yellow: #f0c674;
+  --kb-yellow-mid: #d8ae5b;
+  --kb-yellow-dim: #b29143;
+  --kb-orange: #e87d0d;
+  --kb-orange-dim: #a87a4f;
+  --kb-red: #cf3e3e;
+  --kb-red-dim: #a2575a;
+  --kb-green: #4caf50;
+  --kb-green-dim: #4e774e;
+  --kb-grey: #656565;
+}
+
+/* ===== Dark Mode (Default) ===== */
+.dark {
+  --kb-bg-primary: var(--kb-dark-bg-1);
+  --kb-bg-secondary: var(--kb-dark-bg-2);
+  --kb-bg-tertiary: var(--kb-dark-bg-3);
+  --kb-bg-elevated: var(--kb-dark-bg-4);
+  --kb-bg-hover: var(--kb-dark-bg-5);
+  
+  --kb-text-primary: var(--kb-white-text-1);
+  --kb-text-normal: var(--kb-white-text-2);
+  --kb-text-muted: var(--kb-white-text-3);
+  --kb-text-dim: var(--kb-white-text-4);
+  --kb-text-faint: var(--kb-white-text-5);
+  --kb-text-ghost: var(--kb-white-text-6);
+  
+  --kb-border: var(--kb-dark-bg-4);
+  --kb-accent: var(--kb-yellow);
+  --kb-accent-dim: var(--kb-yellow-dim);
+}
+
+/* ===== Light Mode ===== */
+:root:not(.dark) {
+  --kb-bg-primary: var(--kb-light-bg-1);
+  --kb-bg-secondary: var(--kb-light-bg-2);
+  --kb-bg-tertiary: var(--kb-light-bg-3);
+  --kb-bg-elevated: var(--kb-light-bg-3);
+  --kb-bg-hover: var(--kb-light-bg-4);
+  
+  --kb-text-primary: var(--kb-black-text-1);
+  --kb-text-normal: var(--kb-black-text-2);
+  --kb-text-muted: var(--kb-black-text-3);
+  --kb-text-dim: var(--kb-black-text-4);
+  --kb-text-faint: #939393;
+  --kb-text-ghost: #b0b0b0;
+  
+  --kb-border: var(--kb-light-bg-3);
+  --kb-accent: var(--kb-orange);
+  --kb-accent-dim: var(--kb-orange-dim);
+}

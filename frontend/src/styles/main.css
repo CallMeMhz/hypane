@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./themes/kabadoni.css";
 @plugin "@tailwindcss/typography";
 
 /* 
@@ -14,15 +15,29 @@
 /* Alpine.js cloak */
 [x-cloak] { display: none !important; }
 
+/* ===== Base Styles (Kabadoni Theme) ===== */
+@layer base {
+  body {
+    background-color: var(--kb-bg-primary);
+    color: var(--kb-text-normal);
+  }
+}
+
 /* Custom styles */
 @layer components {
-  /* Cards */
+  /* Cards - Kabadoni styled */
   .card {
-    @apply bg-white dark:bg-gray-800/50 
-           border border-gray-200 dark:border-gray-800 
-           rounded-lg p-4 transition-all 
-           hover:border-gray-300 dark:hover:border-gray-700
-           float-left mb-4;
+    background-color: var(--kb-bg-secondary);
+    border: 1px solid var(--kb-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    transition: all 0.2s;
+    float: left;
+    margin-bottom: 1rem;
+  }
+  
+  .card:hover {
+    border-color: var(--kb-bg-hover);
   }
   
   .card-small {
@@ -37,31 +52,58 @@
     /* Uses large width from media queries */
   }
   
-  /* Custom HTML content - dark mode defaults */
-  .custom-html-content {
-    @apply text-gray-700 dark:text-gray-300;
+  /* Card title */
+  .card h3 {
+    color: var(--kb-text-primary);
   }
   
-  /* Buttons */
+  /* Card content text */
+  .card-content {
+    color: var(--kb-text-normal);
+  }
+  
+  /* Custom HTML content */
+  .custom-html-content {
+    color: var(--kb-text-normal);
+  }
+  
+  /* Buttons - Kabadoni styled */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
   }
   
   .btn-primary {
-    @apply bg-gray-100 dark:bg-gray-800 
-           text-gray-700 dark:text-gray-200 
-           border border-gray-200 dark:border-gray-700 
-           hover:bg-gray-200 dark:hover:bg-gray-700 
-           hover:text-gray-900 dark:hover:text-white;
+    background-color: var(--kb-bg-tertiary);
+    color: var(--kb-text-normal);
+    border: 1px solid var(--kb-border);
   }
   
-  /* Inputs */
+  .btn-primary:hover {
+    background-color: var(--kb-bg-hover);
+    color: var(--kb-text-primary);
+  }
+  
+  /* Inputs - Kabadoni styled */
   .chat-input {
-    @apply w-full px-4 py-2 rounded-lg 
-           border border-gray-200 dark:border-gray-800 
-           bg-white dark:bg-gray-900 
-           text-gray-800 dark:text-gray-200
-           focus:outline-none focus:border-gray-400 dark:focus:border-gray-700;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--kb-border);
+    background-color: var(--kb-bg-primary);
+    color: var(--kb-text-normal);
+  }
+  
+  .chat-input:focus {
+    outline: none;
+    border-color: var(--kb-bg-hover);
+  }
+  
+  .chat-input::placeholder {
+    color: var(--kb-text-faint);
   }
 
   .chat-input-editable {
@@ -74,15 +116,79 @@
 
   /* Text colors - semantic classes */
   .text-primary {
-    @apply text-gray-800 dark:text-gray-200;
+    color: var(--kb-text-primary);
   }
   
   .text-secondary {
-    @apply text-gray-600 dark:text-gray-400;
+    color: var(--kb-text-muted);
   }
   
   .text-muted {
-    @apply text-gray-400 dark:text-gray-600;
+    color: var(--kb-text-faint);
+  }
+  
+  /* Header */
+  .dashboard-header {
+    background-color: var(--kb-bg-tertiary);
+    border-bottom: 1px solid var(--kb-border);
+  }
+  
+  .dashboard-header h1 {
+    color: var(--kb-text-primary);
+  }
+  
+  /* Chat box */
+  .chat-box {
+    background-color: var(--kb-bg-secondary);
+    border: 1px solid var(--kb-border);
+  }
+  
+  .chat-message-user {
+    background-color: var(--kb-bg-tertiary);
+    color: var(--kb-text-normal);
+  }
+  
+  .chat-message-assistant {
+    background-color: var(--kb-bg-primary);
+    color: var(--kb-text-normal);
+  }
+  
+  /* Links */
+  a {
+    color: var(--kb-accent);
+  }
+  
+  a:hover {
+    color: var(--kb-accent-dim);
+  }
+  
+  /* Scrollbar - subtle */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: var(--kb-bg-primary);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--kb-bg-hover);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--kb-text-ghost);
+  }
+  
+  /* Modal */
+  .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  
+  .modal-content {
+    background-color: var(--kb-bg-secondary);
+    border: 1px solid var(--kb-border);
   }
 }
 
