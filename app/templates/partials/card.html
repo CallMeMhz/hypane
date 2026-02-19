@@ -1,8 +1,17 @@
 <!-- Card Partial - renders a single card based on type -->
+{% set grid_size = card.size or '3x2' %}
+{% if 'x' in grid_size %}
+  {% set w = grid_size.split('x')[0] %}
+  {% set h = grid_size.split('x')[1] %}
+  {% set size_class = 'w' ~ w ~ ' h' ~ h %}
+{% else %}
+  {# Legacy size format #}
+  {% set size_class = 'card-' ~ grid_size %}
+{% endif %}
 <div 
   id="card-{{ card.id }}"
-  class="card card-{{ card.size or 'medium' }}"
-  {% if card.height %}style="min-height: {{ card.height }};"{% endif %}
+  class="card {{ size_class }}"
+  data-grid-size="{{ grid_size }}"
   hx-get="/cards/{{ card.id }}"
   hx-trigger="refresh-{{ card.id }} from:body"
   hx-swap="outerHTML"

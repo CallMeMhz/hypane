@@ -238,75 +238,78 @@
   }
 }
 
-/* CSS Grid layout for dashboard */
+/* CSS Grid layout for dashboard - 12 columns, auto rows of 80px */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 80px;
   gap: 16px;
   width: 100%;
 }
 
-/* Card grid spans */
+/* Default card size */
 .dashboard-grid .card {
-  grid-column: span 12;
+  grid-column: span 3;
+  grid-row: span 2;
   float: none;
   margin-bottom: 0;
+  min-height: 0;
+  height: auto;
 }
 
-/* Small screens: 1-2 columns */
-@media (min-width: 640px) {
+/* Grid size classes: WxH format (columns x rows) */
+/* Width classes */
+.dashboard-grid .card[class*="w1"] { grid-column: span 1; }
+.dashboard-grid .card[class*="w2"] { grid-column: span 2; }
+.dashboard-grid .card[class*="w3"] { grid-column: span 3; }
+.dashboard-grid .card[class*="w4"] { grid-column: span 4; }
+.dashboard-grid .card[class*="w5"] { grid-column: span 5; }
+.dashboard-grid .card[class*="w6"] { grid-column: span 6; }
+.dashboard-grid .card[class*="w7"] { grid-column: span 7; }
+.dashboard-grid .card[class*="w8"] { grid-column: span 8; }
+.dashboard-grid .card[class*="w9"] { grid-column: span 9; }
+.dashboard-grid .card[class*="w10"] { grid-column: span 10; }
+.dashboard-grid .card[class*="w11"] { grid-column: span 11; }
+.dashboard-grid .card[class*="w12"] { grid-column: span 12; }
+
+/* Height classes */
+.dashboard-grid .card[class*="h1"] { grid-row: span 1; }
+.dashboard-grid .card[class*="h2"] { grid-row: span 2; }
+.dashboard-grid .card[class*="h3"] { grid-row: span 3; }
+.dashboard-grid .card[class*="h4"] { grid-row: span 4; }
+.dashboard-grid .card[class*="h5"] { grid-row: span 5; }
+.dashboard-grid .card[class*="h6"] { grid-row: span 6; }
+
+/* Legacy size classes (for backward compatibility) */
+.dashboard-grid .card-small { grid-column: span 3; grid-row: span 2; }
+.dashboard-grid .card-medium { grid-column: span 4; grid-row: span 2; }
+.dashboard-grid .card-large { grid-column: span 6; grid-row: span 3; }
+.dashboard-grid .card-full { grid-column: span 12; grid-row: span 2; }
+
+/* Responsive: stack on small screens */
+@media (max-width: 1023px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
   .dashboard-grid .card {
-    grid-column: span 6;
+    grid-column: span 6 !important;
   }
-  .dashboard-grid .card-small {
-    grid-column: span 6;
-  }
-  .dashboard-grid .card-medium {
-    grid-column: span 6;
-  }
-  .dashboard-grid .card-large {
-    grid-column: span 12;
-  }
-  .dashboard-grid .card-full {
-    grid-column: span 12;
+  .dashboard-grid .card[class*="w1"],
+  .dashboard-grid .card[class*="w2"],
+  .dashboard-grid .card[class*="w3"] {
+    grid-column: span 3 !important;
   }
 }
 
-/* Medium screens: 3 columns (12/4=3) */
-@media (min-width: 1024px) {
+@media (max-width: 639px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
   .dashboard-grid .card {
-    grid-column: span 4;
-  }
-  .dashboard-grid .card-small {
-    grid-column: span 3;
-  }
-  .dashboard-grid .card-medium {
-    grid-column: span 4;
-  }
-  .dashboard-grid .card-large {
-    grid-column: span 8;
-  }
-  .dashboard-grid .card-full {
-    grid-column: span 12;
-  }
-}
-
-/* Large screens: 4 columns */
-@media (min-width: 1280px) {
-  .dashboard-grid .card {
-    grid-column: span 3;
-  }
-  .dashboard-grid .card-small {
-    grid-column: span 3;
-  }
-  .dashboard-grid .card-medium {
-    grid-column: span 6;
-  }
-  .dashboard-grid .card-large {
-    grid-column: span 9;
-  }
-  .dashboard-grid .card-full {
-    grid-column: span 12;
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
+    min-height: 120px;
   }
 }
 

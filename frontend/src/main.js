@@ -80,8 +80,9 @@ function refreshGrid() {
   }
 }
 
-// Card resize functionality
-const SIZE_ORDER = ['small', 'medium', 'large', 'full']
+// Card resize functionality - uses WxH grid format (e.g., "3x2")
+const ROW_HEIGHT = 80 + 16 // grid-auto-rows + gap
+const COL_COUNT = 12
 
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
@@ -93,72 +94,67 @@ function initCardResize() {
     const card = document.getElementById('card-' + cardId)
     if (!card) return
     
+    const grid = card.parentElement
     const startX = e.clientX
     const startY = e.clientY
-    const startWidth = card.offsetWidth
-    const startHeight = card.offsetHeight
-    const gridWidth = card.parentElement.offsetWidth
+    const gridWidth = grid.offsetWidth
+    const colWidth = gridWidth / COL_COUNT
     
-    // Get current size
-    let currentSize = 'medium'
-    for (const size of SIZE_ORDER) {
-      if (card.classList.contains('card-' + size)) {
-        currentSize = size
-        break
-      }
+    // Get current grid size from data attribute or classes
+    let currentW = 3, currentH = 2
+    const sizeAttr = card.dataset.gridSize
+    if (sizeAttr && sizeAttr.includes('x')) {
+      const [w, h] = sizeAttr.split('x').map(Number)
+      currentW = w || 3
+      currentH = h || 2
     }
     
-    // Store original min-height and set temporary styles
-    const originalMinHeight = card.style.minHeight
+    const startW = currentW
+    const startH = currentH
+    
+    // Remove transition during drag
     card.style.transition = 'none'
+    
+    const updateCardClass = (w, h) => {
+      // Remove old w/h classes
+      card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').replace(/\bcard-(small|medium|large|full)\b/g, '').trim()
+      card.classList.add('card', `w${w}`, `h${h}`)
+      card.dataset.gridSize = `${w}x${h}`
+    }
     
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
-      const newWidth = startWidth + deltaX
-      const newHeight = startHeight + deltaY
-      const widthPercent = newWidth / gridWidth
       
-      // Determine new size based on width percentage
-      let newSize = 'small'
-      if (widthPercent > 0.8) {
-        newSize = 'full'
-      } else if (widthPercent > 0.55) {
-        newSize = 'large'
-      } else if (widthPercent > 0.35) {
-        newSize = 'medium'
+      // Calculate new grid units
+      let newW = Math.round(startW + deltaX / colWidth)
+      let newH = Math.round(startH + deltaY / ROW_HEIGHT)
+      
+      // Clamp values
+      newW = Math.max(1, Math.min(12, newW))
+      newH = Math.max(1, Math.min(6, newH))
+      
+      // Update if changed
+      if (newW !== currentW || newH !== currentH) {
+        currentW = newW
+        currentH = newH
+        updateCardClass(currentW, currentH)
       }
-      
-      // Update width class if changed
-      if (newSize !== currentSize) {
-        card.classList.remove('card-small', 'card-medium', 'card-large', 'card-full')
-        card.classList.add('card-' + newSize)
-        currentSize = newSize
-      }
-      
-      // Update height directly (with minimum)
-      const minHeight = 80
-      card.style.minHeight = Math.max(minHeight, newHeight) + 'px'
     }
     
     const onMouseUp = async () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       
-      // Get final height
-      const finalHeight = card.style.minHeight
       card.style.transition = ''
       
-      // Save new size and height to backend
+      // Save new size to backend
+      const newSize = `${currentW}x${currentH}`
       try {
-        const updates = { size: currentSize }
-        if (finalHeight) {
-          updates.height = finalHeight
-        }
         await fetch(`/api/cards/${cardId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates)
+          body: JSON.stringify({ size: newSize })
         })
       } catch (e) {
         console.error('Failed to save card size:', e)
