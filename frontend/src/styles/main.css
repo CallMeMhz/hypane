@@ -291,6 +291,8 @@
 .dashboard-grid .card.h4 { height: calc(4 * 80px); }
 .dashboard-grid .card.h5 { height: calc(5 * 80px); }
 .dashboard-grid .card.h6 { height: calc(6 * 80px); }
+.dashboard-grid .card.h7 { height: calc(7 * 80px); }
+.dashboard-grid .card.h8 { height: calc(8 * 80px); }
 
 /* Legacy size classes */
 .dashboard-grid .card-small { width: calc(3 * 80px); height: calc(2 * 80px); }
