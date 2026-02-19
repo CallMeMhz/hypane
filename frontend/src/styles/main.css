@@ -240,87 +240,58 @@
 }
 
 /* Free-position grid layout for dashboard */
-/* Dashboard grid - percentage based for responsiveness */
+/* Dashboard grid - fixed cell size with responsive scaling */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-auto-rows: minmax(80px, auto);
-  gap: 12px;
+  position: relative;
   width: 100%;
   min-height: 400px;
+  /* Base unit size - will be calculated via JS for responsiveness */
+  --cell-size: 80px;
+  --grid-gap: 12px;
 }
 
-/* Cards use grid placement */
+/* Cards are absolutely positioned on a virtual grid */
 .dashboard-grid .card {
-  position: relative;
+  position: absolute;
   margin: 0;
   box-sizing: border-box;
-  /* Default size 3x2 */
-  grid-column: span 3;
-  grid-row: span 2;
-  min-height: 0;
+  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
 }
 
-/* Width classes - grid column spans */
-.dashboard-grid .card.w1 { grid-column: span 1; }
-.dashboard-grid .card.w2 { grid-column: span 2; }
-.dashboard-grid .card.w3 { grid-column: span 3; }
-.dashboard-grid .card.w4 { grid-column: span 4; }
-.dashboard-grid .card.w5 { grid-column: span 5; }
-.dashboard-grid .card.w6 { grid-column: span 6; }
-.dashboard-grid .card.w7 { grid-column: span 7; }
-.dashboard-grid .card.w8 { grid-column: span 8; }
-.dashboard-grid .card.w9 { grid-column: span 9; }
-.dashboard-grid .card.w10 { grid-column: span 10; }
-.dashboard-grid .card.w11 { grid-column: span 11; }
-.dashboard-grid .card.w12 { grid-column: span 12; }
+/* Size classes use CSS custom property for cell size */
+.dashboard-grid .card.w1 { width: calc(1 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w2 { width: calc(2 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w3 { width: calc(3 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w4 { width: calc(4 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w5 { width: calc(5 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w6 { width: calc(6 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w7 { width: calc(7 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w8 { width: calc(8 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w9 { width: calc(9 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w10 { width: calc(10 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w11 { width: calc(11 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.w12 { width: calc(12 * var(--cell-size) - var(--grid-gap)); }
 
-/* Height classes - grid row spans */
-.dashboard-grid .card.h1 { grid-row: span 1; }
-.dashboard-grid .card.h2 { grid-row: span 2; }
-.dashboard-grid .card.h3 { grid-row: span 3; }
-.dashboard-grid .card.h4 { grid-row: span 4; }
-.dashboard-grid .card.h5 { grid-row: span 5; }
-.dashboard-grid .card.h6 { grid-row: span 6; }
-.dashboard-grid .card.h7 { grid-row: span 7; }
-.dashboard-grid .card.h8 { grid-row: span 8; }
+.dashboard-grid .card.h1 { height: calc(1 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h2 { height: calc(2 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h3 { height: calc(3 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h4 { height: calc(4 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h5 { height: calc(5 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h6 { height: calc(6 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h7 { height: calc(7 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h8 { height: calc(8 * var(--cell-size) - var(--grid-gap)); }
+
+/* Default size */
+.dashboard-grid .card {
+  width: calc(3 * var(--cell-size) - var(--grid-gap));
+  height: calc(2 * var(--cell-size) - var(--grid-gap));
+}
 
 /* Legacy size classes */
-.dashboard-grid .card-small { grid-column: span 3; grid-row: span 2; }
-.dashboard-grid .card-medium { grid-column: span 4; grid-row: span 2; }
-.dashboard-grid .card-large { grid-column: span 6; grid-row: span 3; }
-.dashboard-grid .card-full { grid-column: span 12; grid-row: span 2; }
-
-/* Responsive breakpoints */
-@media (max-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-  /* Clamp large widths */
-  .dashboard-grid .card.w7,
-  .dashboard-grid .card.w8,
-  .dashboard-grid .card.w9,
-  .dashboard-grid .card.w10,
-  .dashboard-grid .card.w11,
-  .dashboard-grid .card.w12 { grid-column: span 6; }
-}
-
-@media (max-width: 640px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: minmax(60px, auto);
-  }
-  /* Stack on mobile */
-  .dashboard-grid .card.w4,
-  .dashboard-grid .card.w5,
-  .dashboard-grid .card.w6,
-  .dashboard-grid .card.w7,
-  .dashboard-grid .card.w8,
-  .dashboard-grid .card.w9,
-  .dashboard-grid .card.w10,
-  .dashboard-grid .card.w11,
-  .dashboard-grid .card.w12 { grid-column: span 3; }
-}
+.dashboard-grid .card-small { width: calc(3 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card-medium { width: calc(4 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card-large { width: calc(6 * var(--cell-size) - var(--grid-gap)); height: calc(3 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card-full { width: calc(12 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
 
 /* Chat box animation */
 .chat-box-enter {

@@ -24,7 +24,111 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
-// Card resize functionality - CSS Grid based
+// Grid system - calculates responsive cell size
+const GRID_COLS = 12
+const GRID_GAP = 12
+const MIN_CELL_SIZE = 60
+const MAX_CELL_SIZE = 100
+
+function updateGridCellSize() {
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return 80
+  
+  const containerWidth = grid.offsetWidth
+  // Calculate cell size to fit 12 columns with gaps
+  let cellSize = (containerWidth - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS
+  cellSize = Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, cellSize))
+  
+  grid.style.setProperty('--cell-size', cellSize + 'px')
+  return cellSize
+}
+
+// Update grid height based on card positions
+function updateGridHeight() {
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return
+  
+  const cards = grid.querySelectorAll('.card')
+  let maxBottom = 400
+  
+  cards.forEach(card => {
+    const bottom = card.offsetTop + card.offsetHeight
+    if (bottom > maxBottom) maxBottom = bottom
+  })
+  
+  grid.style.minHeight = (maxBottom + 50) + 'px'
+}
+
+// Card drag functionality
+function initCardDrag() {
+  document.addEventListener('mousedown', (e) => {
+    const handle = e.target.closest('.card-drag-handle')
+    if (!handle) return
+    
+    const card = handle.closest('.card')
+    if (!card) return
+    
+    e.preventDefault()
+    const cardId = card.id.replace('card-', '')
+    const grid = card.parentElement
+    
+    const cellSize = updateGridCellSize()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startGridX = parseInt(card.dataset.gridX) || 0
+    const startGridY = parseInt(card.dataset.gridY) || 0
+    
+    card.style.zIndex = '100'
+    card.style.transition = 'none'
+    
+    const onMouseMove = (e) => {
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
+      
+      // Calculate new grid position
+      let newX = startGridX + Math.round(deltaX / cellSize)
+      let newY = startGridY + Math.round(deltaY / cellSize)
+      
+      // Keep within bounds
+      newX = Math.max(0, newX)
+      newY = Math.max(0, newY)
+      
+      // Update position
+      card.style.left = `calc(${newX} * var(--cell-size))`
+      card.style.top = `calc(${newY} * var(--cell-size))`
+      card.dataset.gridX = newX
+      card.dataset.gridY = newY
+    }
+    
+    const onMouseUp = async () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      
+      card.style.zIndex = ''
+      card.style.transition = ''
+      updateGridHeight()
+      
+      // Save position to backend
+      const x = parseInt(card.dataset.gridX) || 0
+      const y = parseInt(card.dataset.gridY) || 0
+      
+      try {
+        await fetch(`/api/cards/${cardId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ position: { x, y } })
+        })
+      } catch (e) {
+        console.error('Failed to save card position:', e)
+      }
+    }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  })
+}
+
+// Card resize functionality
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
     const handle = e.target.closest('.card-resize-handle')
@@ -35,10 +139,9 @@ function initCardResize() {
     const card = document.getElementById('card-' + cardId)
     if (!card) return
     
+    const cellSize = updateGridCellSize()
     const startX = e.clientX
     const startY = e.clientY
-    const startWidth = card.offsetWidth
-    const startHeight = card.offsetHeight
     
     // Get current grid size
     let currentW = 3, currentH = 2
@@ -58,9 +161,8 @@ function initCardResize() {
       minH = h || 2
     }
     
-    // Calculate cell size from current dimensions
-    const cellWidth = startWidth / currentW
-    const cellHeight = startHeight / currentH
+    const startW = currentW
+    const startH = currentH
     
     card.style.transition = 'none'
     
@@ -74,8 +176,8 @@ function initCardResize() {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      let newW = Math.round((startWidth + deltaX) / cellWidth)
-      let newH = Math.round((startHeight + deltaY) / cellHeight)
+      let newW = startW + Math.round(deltaX / cellSize)
+      let newH = startH + Math.round(deltaY / cellSize)
       
       // Clamp to min/max
       newW = Math.max(minW, Math.min(12, newW))
@@ -93,6 +195,7 @@ function initCardResize() {
       document.removeEventListener('mouseup', onMouseUp)
       
       card.style.transition = ''
+      updateGridHeight()
       
       const newSize = `${currentW}x${currentH}`
       try {
@@ -113,7 +216,16 @@ function initCardResize() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
+  updateGridCellSize()
+  updateGridHeight()
+  initCardDrag()
   initCardResize()
+})
+
+// Update on resize
+window.addEventListener('resize', () => {
+  updateGridCellSize()
+  updateGridHeight()
 })
 
 // Generate a simple session ID

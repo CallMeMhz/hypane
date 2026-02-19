@@ -24,11 +24,17 @@
   'chat': '4x3'
 } %}
 {% set min_size = card.content.minSize if card.content is mapping and card.content.minSize else (default_min_sizes[card.type] if card.type in default_min_sizes else '2x2') %}
+{% set pos = card.position or {} %}
+{% set pos_x = pos.x if pos.x is defined else 0 %}
+{% set pos_y = pos.y if pos.y is defined else 0 %}
 <div 
   id="card-{{ card.id }}"
   class="card {{ size_class }}"
+  style="left: calc({{ pos_x }} * var(--cell-size)); top: calc({{ pos_y }} * var(--cell-size));"
   data-grid-size="{{ grid_size }}"
   data-min-size="{{ min_size }}"
+  data-grid-x="{{ pos_x }}"
+  data-grid-y="{{ pos_y }}"
   hx-get="/cards/{{ card.id }}"
   hx-trigger="refresh-{{ card.id }} from:body"
   hx-swap="outerHTML"
