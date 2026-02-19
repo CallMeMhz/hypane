@@ -240,85 +240,86 @@
 }
 
 /* Free-position grid layout for dashboard */
+/* Dashboard grid - percentage based for responsiveness */
 .dashboard-grid {
-  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: minmax(80px, auto);
+  gap: 12px;
   width: 100%;
   min-height: 400px;
-  /* Grid settings */
-  --grid-size: 80px;
-  --grid-gap: 12px;
-  /* Grid background - offset by half gap to center cards in cells */
-  background-image: 
-    linear-gradient(to right, rgba(128, 128, 128, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(128, 128, 128, 0.1) 1px, transparent 1px);
-  background-size: var(--grid-size) var(--grid-size);
-  background-position: calc(var(--grid-size) - var(--grid-gap) / 2) calc(var(--grid-size) - var(--grid-gap) / 2);
 }
 
-/* Cards are absolutely positioned with gap offset */
+/* Cards use grid placement */
 .dashboard-grid .card {
-  position: absolute;
+  position: relative;
   margin: 0;
   box-sizing: border-box;
-  /* Subtract gap from size */
-  --gap-offset: var(--grid-gap);
-}
-
-/* Grid unit: 80px with gap */
-.dashboard-grid .card {
   /* Default size 3x2 */
-  width: calc(3 * 80px - var(--grid-gap));
-  height: calc(2 * 80px - var(--grid-gap));
-  /* Minimum size: 2x2 grid units */
-  min-width: calc(2 * 80px - var(--grid-gap));
-  min-height: calc(2 * 80px - var(--grid-gap));
+  grid-column: span 3;
+  grid-row: span 2;
+  min-height: 0;
 }
 
-/* Width classes */
-.dashboard-grid .card.w1 { width: calc(1 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w2 { width: calc(2 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w3 { width: calc(3 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w4 { width: calc(4 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w5 { width: calc(5 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w6 { width: calc(6 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w7 { width: calc(7 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w8 { width: calc(8 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w9 { width: calc(9 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w10 { width: calc(10 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w11 { width: calc(11 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.w12 { width: calc(12 * 80px - var(--grid-gap)); }
+/* Width classes - grid column spans */
+.dashboard-grid .card.w1 { grid-column: span 1; }
+.dashboard-grid .card.w2 { grid-column: span 2; }
+.dashboard-grid .card.w3 { grid-column: span 3; }
+.dashboard-grid .card.w4 { grid-column: span 4; }
+.dashboard-grid .card.w5 { grid-column: span 5; }
+.dashboard-grid .card.w6 { grid-column: span 6; }
+.dashboard-grid .card.w7 { grid-column: span 7; }
+.dashboard-grid .card.w8 { grid-column: span 8; }
+.dashboard-grid .card.w9 { grid-column: span 9; }
+.dashboard-grid .card.w10 { grid-column: span 10; }
+.dashboard-grid .card.w11 { grid-column: span 11; }
+.dashboard-grid .card.w12 { grid-column: span 12; }
 
-/* Height classes */
-.dashboard-grid .card.h1 { height: calc(1 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h2 { height: calc(2 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h3 { height: calc(3 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h4 { height: calc(4 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h5 { height: calc(5 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h6 { height: calc(6 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h7 { height: calc(7 * 80px - var(--grid-gap)); }
-.dashboard-grid .card.h8 { height: calc(8 * 80px - var(--grid-gap)); }
+/* Height classes - grid row spans */
+.dashboard-grid .card.h1 { grid-row: span 1; }
+.dashboard-grid .card.h2 { grid-row: span 2; }
+.dashboard-grid .card.h3 { grid-row: span 3; }
+.dashboard-grid .card.h4 { grid-row: span 4; }
+.dashboard-grid .card.h5 { grid-row: span 5; }
+.dashboard-grid .card.h6 { grid-row: span 6; }
+.dashboard-grid .card.h7 { grid-row: span 7; }
+.dashboard-grid .card.h8 { grid-row: span 8; }
 
 /* Legacy size classes */
-.dashboard-grid .card-small { width: calc(3 * 80px - var(--grid-gap)); height: calc(2 * 80px - var(--grid-gap)); }
-.dashboard-grid .card-medium { width: calc(4 * 80px - var(--grid-gap)); height: calc(2 * 80px - var(--grid-gap)); }
-.dashboard-grid .card-large { width: calc(6 * 80px - var(--grid-gap)); height: calc(3 * 80px - var(--grid-gap)); }
-.dashboard-grid .card-full { width: calc(12 * 80px - var(--grid-gap)); height: calc(2 * 80px - var(--grid-gap)); }
+.dashboard-grid .card-small { grid-column: span 3; grid-row: span 2; }
+.dashboard-grid .card-medium { grid-column: span 4; grid-row: span 2; }
+.dashboard-grid .card-large { grid-column: span 6; grid-row: span 3; }
+.dashboard-grid .card-full { grid-column: span 12; grid-row: span 2; }
 
-/* Responsive: smaller grid on mobile */
-@media (max-width: 768px) {
+/* Responsive breakpoints */
+@media (max-width: 1024px) {
   .dashboard-grid {
-    --grid-size: 60px;
+    grid-template-columns: repeat(6, 1fr);
   }
-  .dashboard-grid .card,
-  .dashboard-grid .card.w1, .dashboard-grid .card.w2, .dashboard-grid .card.w3,
-  .dashboard-grid .card.w4, .dashboard-grid .card.w5, .dashboard-grid .card.w6,
-  .dashboard-grid .card.w7, .dashboard-grid .card.w8, .dashboard-grid .card.w9,
-  .dashboard-grid .card.w10, .dashboard-grid .card.w11, .dashboard-grid .card.w12 {
-    position: relative;
-    width: 100%;
-    height: auto;
-    min-height: 120px;
+  /* Clamp large widths */
+  .dashboard-grid .card.w7,
+  .dashboard-grid .card.w8,
+  .dashboard-grid .card.w9,
+  .dashboard-grid .card.w10,
+  .dashboard-grid .card.w11,
+  .dashboard-grid .card.w12 { grid-column: span 6; }
+}
+
+@media (max-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: minmax(60px, auto);
   }
+  /* Stack on mobile */
+  .dashboard-grid .card.w4,
+  .dashboard-grid .card.w5,
+  .dashboard-grid .card.w6,
+  .dashboard-grid .card.w7,
+  .dashboard-grid .card.w8,
+  .dashboard-grid .card.w9,
+  .dashboard-grid .card.w10,
+  .dashboard-grid .card.w11,
+  .dashboard-grid .card.w12 { grid-column: span 3; }
 }
 
 /* Chat box animation */

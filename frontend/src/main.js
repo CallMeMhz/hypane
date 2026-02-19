@@ -24,77 +24,7 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
-// Grid constants
-const GRID_SIZE = 80
-
-// Free-position card dragging
-function initCardDrag() {
-  document.addEventListener('mousedown', (e) => {
-    const handle = e.target.closest('.card-drag-handle')
-    if (!handle) return
-    
-    const card = handle.closest('.card')
-    if (!card) return
-    
-    e.preventDefault()
-    const cardId = card.id.replace('card-', '')
-    const grid = card.parentElement
-    const gridRect = grid.getBoundingClientRect()
-    
-    const startX = e.clientX
-    const startY = e.clientY
-    const startLeft = parseInt(card.style.left) || 0
-    const startTop = parseInt(card.style.top) || 0
-    
-    card.style.zIndex = '100'
-    card.style.transition = 'none'
-    
-    const onMouseMove = (e) => {
-      const deltaX = e.clientX - startX
-      const deltaY = e.clientY - startY
-      
-      // Snap to grid
-      let newX = Math.round((startLeft + deltaX) / GRID_SIZE) * GRID_SIZE
-      let newY = Math.round((startTop + deltaY) / GRID_SIZE) * GRID_SIZE
-      
-      // Keep within bounds
-      newX = Math.max(0, newX)
-      newY = Math.max(0, newY)
-      
-      card.style.left = newX + 'px'
-      card.style.top = newY + 'px'
-      card.dataset.gridX = newX / GRID_SIZE
-      card.dataset.gridY = newY / GRID_SIZE
-    }
-    
-    const onMouseUp = async () => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      
-      card.style.zIndex = ''
-      card.style.transition = ''
-      
-      // Save position to backend
-      const x = parseInt(card.dataset.gridX) || 0
-      const y = parseInt(card.dataset.gridY) || 0
-      
-      try {
-        await fetch(`/api/cards/${cardId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ position: { x, y } })
-        })
-      } catch (e) {
-        console.error('Failed to save card position:', e)
-      }
-    }
-    
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  })
-}
-
-// Card resize functionality
+// Card resize functionality - CSS Grid based
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
     const handle = e.target.closest('.card-resize-handle')
@@ -107,6 +37,8 @@ function initCardResize() {
     
     const startX = e.clientX
     const startY = e.clientY
+    const startWidth = card.offsetWidth
+    const startHeight = card.offsetHeight
     
     // Get current grid size
     let currentW = 3, currentH = 2
@@ -126,8 +58,9 @@ function initCardResize() {
       minH = h || 2
     }
     
-    const startW = currentW
-    const startH = currentH
+    // Calculate cell size from current dimensions
+    const cellWidth = startWidth / currentW
+    const cellHeight = startHeight / currentH
     
     card.style.transition = 'none'
     
@@ -141,10 +74,10 @@ function initCardResize() {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      let newW = Math.round(startW + deltaX / GRID_SIZE)
-      let newH = Math.round(startH + deltaY / GRID_SIZE)
+      let newW = Math.round((startWidth + deltaX) / cellWidth)
+      let newH = Math.round((startHeight + deltaY) / cellHeight)
       
-      // Clamp to min/max per card type
+      // Clamp to min/max
       newW = Math.max(minW, Math.min(12, newW))
       newH = Math.max(minH, Math.min(8, newH))
       
@@ -180,7 +113,6 @@ function initCardResize() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-  initCardDrag()
   initCardResize()
 })
 
