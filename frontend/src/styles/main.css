@@ -86,11 +86,6 @@
     cursor: grabbing;
   }
   
-  /* Disable masonry transition during drag */
-  .dashboard-grid.dragging .card {
-    transition: none !important;
-  }
-  
   .card-small {
     /* Uses default width from media queries */
   }
@@ -243,65 +238,75 @@
   }
 }
 
-/* Masonry grid */
+/* CSS Grid layout for dashboard */
 .dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
   width: 100%;
 }
 
-.dashboard-grid::after {
-  content: '';
-  display: block;
-  clear: both;
-}
-
-/* Sizer element for masonry column width */
-.card-sizer,
+/* Card grid spans */
 .dashboard-grid .card {
-  width: 100%;
+  grid-column: span 12;
+  float: none;
+  margin-bottom: 0;
 }
 
+/* Small screens: 1-2 columns */
 @media (min-width: 640px) {
-  .card-sizer,
   .dashboard-grid .card {
-    width: calc(50% - 8px);
+    grid-column: span 6;
+  }
+  .dashboard-grid .card-small {
+    grid-column: span 6;
+  }
+  .dashboard-grid .card-medium {
+    grid-column: span 6;
   }
   .dashboard-grid .card-large {
-    width: 100%;
+    grid-column: span 12;
   }
   .dashboard-grid .card-full {
-    width: 100%;
+    grid-column: span 12;
   }
 }
 
+/* Medium screens: 3 columns (12/4=3) */
 @media (min-width: 1024px) {
-  .card-sizer,
   .dashboard-grid .card {
-    width: calc(33.333% - 11px);
+    grid-column: span 4;
+  }
+  .dashboard-grid .card-small {
+    grid-column: span 3;
   }
   .dashboard-grid .card-medium {
-    width: calc(50% - 8px);
+    grid-column: span 4;
   }
   .dashboard-grid .card-large {
-    width: calc(66.666% - 5px);
+    grid-column: span 8;
   }
   .dashboard-grid .card-full {
-    width: 100%;
+    grid-column: span 12;
   }
 }
 
+/* Large screens: 4 columns */
 @media (min-width: 1280px) {
-  .card-sizer,
   .dashboard-grid .card {
-    width: calc(25% - 12px);
+    grid-column: span 3;
+  }
+  .dashboard-grid .card-small {
+    grid-column: span 3;
   }
   .dashboard-grid .card-medium {
-    width: calc(50% - 8px);
+    grid-column: span 6;
   }
   .dashboard-grid .card-large {
-    width: calc(75% - 4px);
+    grid-column: span 9;
   }
   .dashboard-grid .card-full {
-    width: 100%;
+    grid-column: span 12;
   }
 }
 

@@ -5,9 +5,6 @@ import './styles/main.css'
 import htmx from 'htmx.org'
 window.htmx = htmx
 
-// Masonry layout
-import Masonry from 'masonry-layout'
-
 // Sortable for drag-and-drop
 import Sortable from 'sortablejs'
 
@@ -30,27 +27,13 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
-// Initialize or refresh masonry layout
-let masonryInstance = null
+// Grid layout - sortable drag-and-drop
 let sortableInstance = null
 
-function initMasonry() {
+function initGrid() {
   const grid = document.getElementById('dashboard-cards')
   if (!grid) return
   
-  if (masonryInstance) {
-    masonryInstance.destroy()
-  }
-  
-  masonryInstance = new Masonry(grid, {
-    itemSelector: '.card',
-    columnWidth: '.card-sizer',
-    gutter: 16,
-    percentPosition: true,
-    transitionDuration: '0.2s'
-  })
-  
-  // Initialize sortable after masonry
   initSortable(grid)
 }
 
@@ -65,19 +48,9 @@ function initSortable(grid) {
     chosenClass: 'sortable-chosen',
     dragClass: 'sortable-drag',
     handle: '.card-drag-handle',
-    filter: '.card-sizer', // Don't drag the sizer element
     draggable: '.card',
     
-    onStart: function() {
-      // Disable masonry during drag
-      if (masonryInstance) {
-        grid.classList.add('dragging')
-      }
-    },
-    
     onEnd: async function(evt) {
-      grid.classList.remove('dragging')
-      
       // Get new order of card IDs
       const cards = grid.querySelectorAll('.card')
       const cardIds = Array.from(cards).map(el => {
@@ -95,25 +68,15 @@ function initSortable(grid) {
       } catch (e) {
         console.error('Failed to save card order:', e)
       }
-      
-      // Re-layout masonry
-      if (masonryInstance) {
-        setTimeout(() => {
-          masonryInstance.reloadItems()
-          masonryInstance.layout()
-        }, 50)
-      }
     }
   })
 }
 
-// Refresh masonry after content changes
-function refreshMasonry() {
-  if (masonryInstance) {
-    masonryInstance.reloadItems()
-    masonryInstance.layout()
-  } else {
-    initMasonry()
+// Refresh grid (re-init sortable after HTMX swap)
+function refreshGrid() {
+  const grid = document.getElementById('dashboard-cards')
+  if (grid) {
+    initSortable(grid)
   }
 }
 
@@ -176,11 +139,6 @@ function initCardResize() {
       // Update height directly (with minimum)
       const minHeight = 80
       card.style.minHeight = Math.max(minHeight, newHeight) + 'px'
-      
-      // Re-layout masonry
-      if (masonryInstance) {
-        masonryInstance.layout()
-      }
     }
     
     const onMouseUp = async () => {
@@ -205,14 +163,6 @@ function initCardResize() {
       } catch (e) {
         console.error('Failed to save card size:', e)
       }
-      
-      // Final masonry layout
-      if (masonryInstance) {
-        setTimeout(() => {
-          masonryInstance.reloadItems()
-          masonryInstance.layout()
-        }, 50)
-      }
     }
     
     document.addEventListener('mousemove', onMouseMove)
@@ -222,18 +172,16 @@ function initCardResize() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(initMasonry, 100)
+  setTimeout(initGrid, 100)
   initCardResize()
 })
 
 // Refresh after HTMX swaps
 document.body.addEventListener('htmx:afterSwap', (e) => {
   if (e.target.id === 'dashboard-cards') {
-    setTimeout(refreshMasonry, 50)
+    setTimeout(refreshGrid, 50)
   }
 })
-
-window.refreshMasonry = refreshMasonry
 
 // Generate a simple session ID
 function generateSessionId() {
