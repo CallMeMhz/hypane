@@ -117,9 +117,93 @@ function refreshMasonry() {
   }
 }
 
+// Card resize functionality
+const SIZE_ORDER = ['small', 'medium', 'large', 'full']
+
+function initCardResize() {
+  document.addEventListener('mousedown', (e) => {
+    const handle = e.target.closest('.card-resize-handle')
+    if (!handle) return
+    
+    e.preventDefault()
+    const cardId = handle.dataset.cardId
+    const card = document.getElementById('card-' + cardId)
+    if (!card) return
+    
+    const startX = e.clientX
+    const startWidth = card.offsetWidth
+    const gridWidth = card.parentElement.offsetWidth
+    
+    // Get current size
+    let currentSize = 'medium'
+    for (const size of SIZE_ORDER) {
+      if (card.classList.contains('card-' + size)) {
+        currentSize = size
+        break
+      }
+    }
+    
+    const onMouseMove = (e) => {
+      const deltaX = e.clientX - startX
+      const newWidth = startWidth + deltaX
+      const widthPercent = newWidth / gridWidth
+      
+      // Determine new size based on width percentage
+      let newSize = 'small'
+      if (widthPercent > 0.8) {
+        newSize = 'full'
+      } else if (widthPercent > 0.55) {
+        newSize = 'large'
+      } else if (widthPercent > 0.35) {
+        newSize = 'medium'
+      }
+      
+      // Update visual feedback
+      if (newSize !== currentSize) {
+        card.classList.remove('card-small', 'card-medium', 'card-large', 'card-full')
+        card.classList.add('card-' + newSize)
+        currentSize = newSize
+        
+        // Re-layout masonry
+        if (masonryInstance) {
+          masonryInstance.layout()
+        }
+      }
+    }
+    
+    const onMouseUp = async () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      
+      // Save new size to backend
+      try {
+        await fetch(`/api/cards/${cardId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ size: currentSize })
+        })
+      } catch (e) {
+        console.error('Failed to save card size:', e)
+      }
+      
+      // Final masonry layout
+      if (masonryInstance) {
+        setTimeout(() => {
+          masonryInstance.reloadItems()
+          masonryInstance.layout()
+        }, 50)
+      }
+    }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  })
+}
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(initMasonry, 100)
+  initCardResize()
 })
 
 // Refresh after HTMX swaps

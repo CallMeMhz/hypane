@@ -34,10 +34,35 @@
     transition: all 0.2s;
     float: left;
     margin-bottom: 1rem;
+    position: relative;
   }
   
   .card:hover {
     border-color: var(--kb-bg-hover);
+  }
+  
+  /* Resize handle */
+  .card-resize-handle {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: var(--kb-text-ghost);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .card:hover .card-resize-handle {
+    opacity: 1;
+  }
+  
+  .card-resize-handle:hover {
+    color: var(--kb-text-muted);
   }
   
   /* Sortable drag styles */
