@@ -240,58 +240,59 @@
 }
 
 /* Free-position grid layout for dashboard */
-/* Dashboard grid - fixed cell size with responsive scaling */
+/* Dashboard grid - Microsoft-style tile grid */
 .dashboard-grid {
   position: relative;
   width: 100%;
   min-height: 400px;
-  /* Base unit size - will be calculated via JS for responsiveness */
-  --cell-size: 80px;
-  --grid-gap: 12px;
+  padding: var(--grid-gap, 8px);
+  /* CSS variables set by JS */
+  --cell-size: 70px;
+  --grid-gap: 8px;
 }
 
-/* Cards are absolutely positioned on a virtual grid */
+/* Cards are absolutely positioned */
 .dashboard-grid .card {
   position: absolute;
   margin: 0;
   box-sizing: border-box;
-  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
+  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 
-/* Size classes use CSS custom property for cell size */
-.dashboard-grid .card.w1 { width: calc(1 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w2 { width: calc(2 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w3 { width: calc(3 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w4 { width: calc(4 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w5 { width: calc(5 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w6 { width: calc(6 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w7 { width: calc(7 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w8 { width: calc(8 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w9 { width: calc(9 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w10 { width: calc(10 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w11 { width: calc(11 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.w12 { width: calc(12 * var(--cell-size) - var(--grid-gap)); }
+/* Size uses cell + gap for multi-cell tiles */
+.dashboard-grid .card.w1 { width: calc(1 * var(--cell-size)); }
+.dashboard-grid .card.w2 { width: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
+.dashboard-grid .card.w3 { width: calc(3 * var(--cell-size) + 2 * var(--grid-gap)); }
+.dashboard-grid .card.w4 { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
+.dashboard-grid .card.w5 { width: calc(5 * var(--cell-size) + 4 * var(--grid-gap)); }
+.dashboard-grid .card.w6 { width: calc(6 * var(--cell-size) + 5 * var(--grid-gap)); }
+.dashboard-grid .card.w7 { width: calc(7 * var(--cell-size) + 6 * var(--grid-gap)); }
+.dashboard-grid .card.w8 { width: calc(8 * var(--cell-size) + 7 * var(--grid-gap)); }
+.dashboard-grid .card.w9 { width: calc(9 * var(--cell-size) + 8 * var(--grid-gap)); }
+.dashboard-grid .card.w10 { width: calc(10 * var(--cell-size) + 9 * var(--grid-gap)); }
+.dashboard-grid .card.w11 { width: calc(11 * var(--cell-size) + 10 * var(--grid-gap)); }
+.dashboard-grid .card.w12 { width: calc(12 * var(--cell-size) + 11 * var(--grid-gap)); }
 
-.dashboard-grid .card.h1 { height: calc(1 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h2 { height: calc(2 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h3 { height: calc(3 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h4 { height: calc(4 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h5 { height: calc(5 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h6 { height: calc(6 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h7 { height: calc(7 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card.h8 { height: calc(8 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card.h1 { height: calc(1 * var(--cell-size)); }
+.dashboard-grid .card.h2 { height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
+.dashboard-grid .card.h3 { height: calc(3 * var(--cell-size) + 2 * var(--grid-gap)); }
+.dashboard-grid .card.h4 { height: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
+.dashboard-grid .card.h5 { height: calc(5 * var(--cell-size) + 4 * var(--grid-gap)); }
+.dashboard-grid .card.h6 { height: calc(6 * var(--cell-size) + 5 * var(--grid-gap)); }
+.dashboard-grid .card.h7 { height: calc(7 * var(--cell-size) + 6 * var(--grid-gap)); }
+.dashboard-grid .card.h8 { height: calc(8 * var(--cell-size) + 7 * var(--grid-gap)); }
 
 /* Default size */
 .dashboard-grid .card {
-  width: calc(3 * var(--cell-size) - var(--grid-gap));
-  height: calc(2 * var(--cell-size) - var(--grid-gap));
+  width: calc(2 * var(--cell-size) + 1 * var(--grid-gap));
+  height: calc(2 * var(--cell-size) + 1 * var(--grid-gap));
 }
 
 /* Legacy size classes */
-.dashboard-grid .card-small { width: calc(3 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card-medium { width: calc(4 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card-large { width: calc(6 * var(--cell-size) - var(--grid-gap)); height: calc(3 * var(--cell-size) - var(--grid-gap)); }
-.dashboard-grid .card-full { width: calc(12 * var(--cell-size) - var(--grid-gap)); height: calc(2 * var(--cell-size) - var(--grid-gap)); }
+.dashboard-grid .card-small { width: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
+.dashboard-grid .card-medium { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
+.dashboard-grid .card-large { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); height: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
+.dashboard-grid .card-full { width: calc(12 * var(--cell-size) + 11 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
 
 /* Chat box animation */
 .chat-box-enter {

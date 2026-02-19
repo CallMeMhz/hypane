@@ -24,43 +24,170 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
-// Grid system - calculates responsive cell size
-const GRID_COLS = 12
-const GRID_GAP = 12
-const MIN_CELL_SIZE = 60
-const MAX_CELL_SIZE = 100
+// ============================================
+// Microsoft-style Tile Grid System
+// ============================================
 
+const GRID_COLS = 12
+const GRID_GAP = 8  // Microsoft uses 8px gap
+const BASE_UNIT = 70  // Microsoft base unit
+
+// Standard tile sizes (in grid units)
+const TILE_SIZES = {
+  small: { w: 1, h: 1 },   // 70x70
+  medium: { w: 2, h: 2 },  // 150x150
+  wide: { w: 4, h: 2 },    // 310x150
+  large: { w: 4, h: 4 },   // 310x310
+}
+
+// Grid state
+let gridState = {
+  cellSize: BASE_UNIT,
+  cards: [],  // [{id, x, y, w, h, el}, ...]
+}
+
+// Calculate cell size based on container
 function updateGridCellSize() {
   const grid = document.getElementById('dashboard-cards')
-  if (!grid) return 80
+  if (!grid) return BASE_UNIT
   
   const containerWidth = grid.offsetWidth
-  // Calculate cell size to fit 12 columns with gaps
-  let cellSize = (containerWidth - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS
-  cellSize = Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, cellSize))
+  // Fit 12 columns with gaps
+  let cellSize = (containerWidth - GRID_GAP * (GRID_COLS + 1)) / GRID_COLS
+  cellSize = Math.max(50, Math.min(BASE_UNIT, cellSize))
   
   grid.style.setProperty('--cell-size', cellSize + 'px')
+  grid.style.setProperty('--grid-gap', GRID_GAP + 'px')
+  gridState.cellSize = cellSize
   return cellSize
 }
 
-// Update grid height based on card positions
+// Build grid state from DOM
+function buildGridState() {
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return
+  
+  gridState.cards = []
+  const cards = grid.querySelectorAll('.card')
+  
+  cards.forEach(card => {
+    const x = parseInt(card.dataset.gridX) || 0
+    const y = parseInt(card.dataset.gridY) || 0
+    const size = card.dataset.gridSize || '2x2'
+    const [w, h] = size.split('x').map(Number)
+    
+    gridState.cards.push({
+      id: card.id,
+      x, y, w, h,
+      el: card
+    })
+  })
+}
+
+// Check if a position overlaps with any card (except excludeId)
+function checkOverlap(x, y, w, h, excludeId) {
+  for (const card of gridState.cards) {
+    if (card.id === excludeId) continue
+    
+    // Check rectangle overlap
+    if (x < card.x + card.w &&
+        x + w > card.x &&
+        y < card.y + card.h &&
+        y + h > card.y) {
+      return card
+    }
+  }
+  return null
+}
+
+// Find first available position for a card (flow layout)
+function findAvailablePosition(w, h, excludeId) {
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x <= GRID_COLS - w; x++) {
+      if (!checkOverlap(x, y, w, h, excludeId)) {
+        return { x, y }
+      }
+    }
+  }
+  return { x: 0, y: 0 }
+}
+
+// Push cards down to make room (Microsoft-style reflow)
+function reflowCards(movedCard, newX, newY) {
+  const cards = gridState.cards.filter(c => c.id !== movedCard.id)
+  
+  // Sort by position (top-left to bottom-right)
+  cards.sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
+  
+  // Check each card for overlap with moved card
+  for (const card of cards) {
+    if (newX < card.x + card.w &&
+        newX + movedCard.w > card.x &&
+        newY < card.y + card.h &&
+        newY + movedCard.h > card.y) {
+      
+      // This card overlaps - push it down
+      const pushY = newY + movedCard.h
+      
+      // Update position
+      card.y = pushY
+      card.el.style.top = `calc(${pushY} * (var(--cell-size) + var(--grid-gap)))`
+      card.el.dataset.gridY = pushY
+      
+      // Recursively reflow cards that this one might now overlap
+      reflowCards(card, card.x, card.y)
+    }
+  }
+}
+
+// Update grid container height
 function updateGridHeight() {
   const grid = document.getElementById('dashboard-cards')
   if (!grid) return
   
-  const cards = grid.querySelectorAll('.card')
   let maxBottom = 400
-  
-  cards.forEach(card => {
-    const bottom = card.offsetTop + card.offsetHeight
+  for (const card of gridState.cards) {
+    const bottom = (card.y + card.h) * (gridState.cellSize + GRID_GAP)
     if (bottom > maxBottom) maxBottom = bottom
-  })
+  }
   
   grid.style.minHeight = (maxBottom + 50) + 'px'
 }
 
+// Apply positions to DOM
+function applyPositions() {
+  for (const card of gridState.cards) {
+    card.el.style.left = `calc(${card.x} * (var(--cell-size) + var(--grid-gap)))`
+    card.el.style.top = `calc(${card.y} * (var(--cell-size) + var(--grid-gap)))`
+    card.el.dataset.gridX = card.x
+    card.el.dataset.gridY = card.y
+  }
+  updateGridHeight()
+}
+
+// Save all card positions to backend
+async function saveAllPositions() {
+  const updates = gridState.cards.map(c => ({
+    id: c.id.replace('card-', ''),
+    position: { x: c.x, y: c.y }
+  }))
+  
+  try {
+    await fetch('/api/cards/positions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: updates })
+    })
+  } catch (e) {
+    console.error('Failed to save positions:', e)
+  }
+}
+
 // Card drag functionality
 function initCardDrag() {
+  let dragCard = null
+  let dragPlaceholder = null
+  
   document.addEventListener('mousedown', (e) => {
     const handle = e.target.closest('.card-drag-handle')
     if (!handle) return
@@ -69,58 +196,87 @@ function initCardDrag() {
     if (!card) return
     
     e.preventDefault()
-    const cardId = card.id.replace('card-', '')
-    const grid = card.parentElement
+    buildGridState()
     
+    const cardState = gridState.cards.find(c => c.id === card.id)
+    if (!cardState) return
+    
+    dragCard = cardState
     const cellSize = updateGridCellSize()
     const startX = e.clientX
     const startY = e.clientY
-    const startGridX = parseInt(card.dataset.gridX) || 0
-    const startGridY = parseInt(card.dataset.gridY) || 0
+    const startGridX = cardState.x
+    const startGridY = cardState.y
+    
+    // Create placeholder
+    dragPlaceholder = document.createElement('div')
+    dragPlaceholder.className = 'card-placeholder'
+    dragPlaceholder.style.cssText = `
+      position: absolute;
+      left: calc(${startGridX} * (var(--cell-size) + var(--grid-gap)));
+      top: calc(${startGridY} * (var(--cell-size) + var(--grid-gap)));
+      width: calc(${cardState.w} * var(--cell-size) + ${cardState.w - 1} * var(--grid-gap));
+      height: calc(${cardState.h} * var(--cell-size) + ${cardState.h - 1} * var(--grid-gap));
+      border: 2px dashed var(--kb-border);
+      border-radius: 0.5rem;
+      opacity: 0.5;
+      pointer-events: none;
+    `
+    card.parentElement.appendChild(dragPlaceholder)
     
     card.style.zIndex = '100'
     card.style.transition = 'none'
+    card.style.opacity = '0.9'
+    card.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)'
     
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      // Calculate new grid position
-      let newX = startGridX + Math.round(deltaX / cellSize)
-      let newY = startGridY + Math.round(deltaY / cellSize)
+      // Free movement for the dragged card
+      card.style.left = `calc(${startGridX} * (var(--cell-size) + var(--grid-gap)) + ${deltaX}px)`
+      card.style.top = `calc(${startGridY} * (var(--cell-size) + var(--grid-gap)) + ${deltaY}px)`
       
-      // Keep within bounds
-      newX = Math.max(0, newX)
+      // Calculate snapped grid position
+      let newX = startGridX + Math.round(deltaX / (cellSize + GRID_GAP))
+      let newY = startGridY + Math.round(deltaY / (cellSize + GRID_GAP))
+      newX = Math.max(0, Math.min(GRID_COLS - cardState.w, newX))
       newY = Math.max(0, newY)
       
-      // Update position
-      card.style.left = `calc(${newX} * var(--cell-size))`
-      card.style.top = `calc(${newY} * var(--cell-size))`
-      card.dataset.gridX = newX
-      card.dataset.gridY = newY
+      // Update placeholder position
+      dragPlaceholder.style.left = `calc(${newX} * (var(--cell-size) + var(--grid-gap)))`
+      dragPlaceholder.style.top = `calc(${newY} * (var(--cell-size) + var(--grid-gap)))`
+      
+      // Check for overlaps and reflow
+      if (newX !== cardState.x || newY !== cardState.y) {
+        cardState.x = newX
+        cardState.y = newY
+        reflowCards(cardState, newX, newY)
+        applyPositions()
+      }
     }
     
     const onMouseUp = async () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       
+      if (dragPlaceholder) {
+        dragPlaceholder.remove()
+        dragPlaceholder = null
+      }
+      
       card.style.zIndex = ''
       card.style.transition = ''
-      updateGridHeight()
+      card.style.opacity = ''
+      card.style.boxShadow = ''
       
-      // Save position to backend
-      const x = parseInt(card.dataset.gridX) || 0
-      const y = parseInt(card.dataset.gridY) || 0
+      // Snap to final position
+      applyPositions()
       
-      try {
-        await fetch(`/api/cards/${cardId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ position: { x, y } })
-        })
-      } catch (e) {
-        console.error('Failed to save card position:', e)
-      }
+      // Save all positions
+      await saveAllPositions()
+      
+      dragCard = null
     }
     
     document.addEventListener('mousemove', onMouseMove)
@@ -135,24 +291,22 @@ function initCardResize() {
     if (!handle) return
     
     e.preventDefault()
+    buildGridState()
+    
     const cardId = handle.dataset.cardId
     const card = document.getElementById('card-' + cardId)
     if (!card) return
     
+    const cardState = gridState.cards.find(c => c.id === card.id)
+    if (!cardState) return
+    
     const cellSize = updateGridCellSize()
     const startX = e.clientX
     const startY = e.clientY
+    const startW = cardState.w
+    const startH = cardState.h
     
-    // Get current grid size
-    let currentW = 3, currentH = 2
-    const sizeAttr = card.dataset.gridSize
-    if (sizeAttr && sizeAttr.includes('x')) {
-      const [w, h] = sizeAttr.split('x').map(Number)
-      currentW = w || 3
-      currentH = h || 2
-    }
-    
-    // Get minimum size for this card type
+    // Get minimum size
     let minW = 2, minH = 2
     const minSizeAttr = card.dataset.minSize
     if (minSizeAttr && minSizeAttr.includes('x')) {
@@ -161,32 +315,30 @@ function initCardResize() {
       minH = h || 2
     }
     
-    const startW = currentW
-    const startH = currentH
-    
     card.style.transition = 'none'
     
     const updateCardSize = (w, h) => {
-      card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').replace(/\bcard-(small|medium|large|full)\b/g, '').trim()
+      card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').trim()
       card.classList.add('card', `w${w}`, `h${h}`)
       card.dataset.gridSize = `${w}x${h}`
+      cardState.w = w
+      cardState.h = h
     }
     
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      let newW = startW + Math.round(deltaX / cellSize)
-      let newH = startH + Math.round(deltaY / cellSize)
+      let newW = startW + Math.round(deltaX / (cellSize + GRID_GAP))
+      let newH = startH + Math.round(deltaY / (cellSize + GRID_GAP))
       
-      // Clamp to min/max
-      newW = Math.max(minW, Math.min(12, newW))
+      newW = Math.max(minW, Math.min(GRID_COLS - cardState.x, newW))
       newH = Math.max(minH, Math.min(8, newH))
       
-      if (newW !== currentW || newH !== currentH) {
-        currentW = newW
-        currentH = newH
-        updateCardSize(currentW, currentH)
+      if (newW !== cardState.w || newH !== cardState.h) {
+        updateCardSize(newW, newH)
+        reflowCards(cardState, cardState.x, cardState.y)
+        applyPositions()
       }
     }
     
@@ -195,17 +347,18 @@ function initCardResize() {
       document.removeEventListener('mouseup', onMouseUp)
       
       card.style.transition = ''
-      updateGridHeight()
       
-      const newSize = `${currentW}x${currentH}`
+      // Save size and positions
+      const newSize = `${cardState.w}x${cardState.h}`
       try {
         await fetch(`/api/cards/${cardId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ size: newSize })
         })
+        await saveAllPositions()
       } catch (e) {
-        console.error('Failed to save card size:', e)
+        console.error('Failed to save:', e)
       }
     }
     
@@ -217,7 +370,8 @@ function initCardResize() {
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   updateGridCellSize()
-  updateGridHeight()
+  buildGridState()
+  applyPositions()
   initCardDrag()
   initCardResize()
 })
@@ -225,7 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // Update on resize
 window.addEventListener('resize', () => {
   updateGridCellSize()
-  updateGridHeight()
+  buildGridState()
+  applyPositions()
 })
 
 // Generate a simple session ID

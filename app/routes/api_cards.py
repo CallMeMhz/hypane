@@ -360,3 +360,34 @@ async def merge_cards(request: MergeCardsRequest):
     )
     
     return merged_card
+
+
+class UpdatePositionsRequest(BaseModel):
+    cards: List[dict]  # [{id, position: {x, y}}, ...]
+
+
+@router.post("/positions")
+async def update_positions(request: UpdatePositionsRequest):
+    """Update positions of multiple cards at once."""
+    dashboard = get_dashboard()
+    cards = dashboard.get("cards", [])
+    
+    # Create a map of cards by ID
+    card_map = {c["id"]: c for c in cards}
+    
+    now = datetime.now(timezone.utc)
+    updated = []
+    
+    for update in request.cards:
+        card_id = update.get("id")
+        position = update.get("position")
+        
+        if card_id in card_map and position:
+            card_map[card_id]["position"] = position
+            card_map[card_id]["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+            updated.append(card_id)
+    
+    dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+    save_dashboard(dashboard)
+    
+    return {"updated": updated}
