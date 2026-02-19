@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -10,6 +10,7 @@ router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: Optional[str] = None
 
 
 @router.post("/chat")
@@ -25,11 +26,8 @@ async def chat(request: ChatRequest):
     )
 
 
-@router.get("/chat/stream")
-async def chat_stream(
-    message: str,
-    session_id: Optional[str] = Query(default=None, description="Session ID for conversation continuity")
-):
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
     """
     SSE stream for agent response.
     
@@ -37,7 +35,7 @@ async def chat_stream(
     Otherwise, each request is independent (agent uses tools to see history).
     """
     return StreamingResponse(
-        run_agent_stream(message, session_id),
+        run_agent_stream(request.message, request.session_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

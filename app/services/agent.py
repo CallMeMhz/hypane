@@ -3,12 +3,20 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from typing import AsyncIterator, Optional
 
 from app.config import PI_COMMAND, SYSTEM_SKILL, SESSIONS_DIR, DASHBOARD_EXTENSION
 
 # 增大行缓冲区限制到 10MB
 STREAM_LIMIT = 10 * 1024 * 1024
+
+
+def get_system_context() -> str:
+    """Generate system context with current time."""
+    now = datetime.now()
+    utc_now = datetime.now(timezone.utc)
+    return f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} (local), {utc_now.strftime('%Y-%m-%d %H:%M:%S')} UTC"
 
 
 async def run_agent_chat(message: str) -> dict:
@@ -73,9 +81,13 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
         # No session - each request is independent
         session_file = None
 
+    # Prepend system context to message
+    system_context = get_system_context()
+    full_message = f"[{system_context}]\n\n{message}"
+
     cmd = [
         PI_COMMAND,
-        "-p", message,
+        "-p", full_message,
         "--skill", str(SYSTEM_SKILL),
         "-e", str(DASHBOARD_EXTENSION),
         "--mode", "json",

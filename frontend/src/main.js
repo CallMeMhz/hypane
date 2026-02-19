@@ -29,20 +29,31 @@ function generateSessionId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5)
 }
 
-// Insert card reference to chat input
-window.insertCardToChat = function(cardId, cardTitle, cardType) {
+// Insert card reference to chat input (with rendered HTML for debug)
+window.insertCardToChat = function(cardId) {
   const chatBoxEl = document.querySelector('[x-data="chatBox"]')
   if (!chatBoxEl) return
   
   const chatBox = Alpine.$data(chatBoxEl)
+  
+  // Get card element and extract info
+  const cardEl = document.getElementById('card-' + cardId)
+  if (!cardEl) return
+  
+  const titleEl = cardEl.querySelector('h3')
+  const title = titleEl ? titleEl.textContent.trim() : cardId
+  
+  // Get rendered HTML from card content
+  const contentEl = cardEl.querySelector('.card-content')
+  const renderedHtml = contentEl ? contentEl.innerHTML.trim() : ''
   
   // Open chat if not open
   if (!chatBox.open) {
     chatBox.open = true
   }
   
-  // Add card reference
-  chatBox.addCardRef(cardId, cardTitle)
+  // Add card reference with HTML
+  chatBox.addCardRef(cardId, title, renderedHtml)
 }
 
 // Alpine components
@@ -51,17 +62,17 @@ Alpine.data('chatBox', () => ({
   messages: [],
   loading: false,
   currentMessageIndex: -1,
-  cardRefs: [], // [{id, title}, ...]
+  cardRefs: [], // [{id, title, html}, ...]
   sessionId: generateSessionId(), // Unique session for this browser tab
 
   toggle() {
     this.open = !this.open
   },
 
-  addCardRef(cardId, cardTitle) {
+  addCardRef(cardId, cardTitle, renderedHtml = '') {
     // Avoid duplicates
     if (!this.cardRefs.find(c => c.id === cardId)) {
-      this.cardRefs.push({ id: cardId, title: cardTitle })
+      this.cardRefs.push({ id: cardId, title: cardTitle, html: renderedHtml })
     }
     // Focus input after a short delay
     setTimeout(() => {
@@ -92,16 +103,25 @@ Alpine.data('chatBox', () => ({
     const text = this.getInputText()
     if ((!text && this.cardRefs.length === 0) || this.loading) return
 
-    // Build message with card references
+    // Build message with card references (include rendered HTML for agent debugging)
     let userMessage = ''
     if (this.cardRefs.length > 0) {
-      const refs = this.cardRefs.map(c => `[${c.title}](${c.id})`).join(' ')
-      userMessage = refs + (text ? ' ' + text : '')
+      const refs = this.cardRefs.map(c => {
+        // Format: [title](id) with HTML context
+        let ref = `[${c.title}](${c.id})`
+        if (c.html) {
+          // Add rendered HTML as context (truncate if too long)
+          const truncatedHtml = c.html.length > 2000 ? c.html.slice(0, 2000) + '...' : c.html
+          ref += `\n<card-html id="${c.id}">\n${truncatedHtml}\n</card-html>`
+        }
+        return ref
+      }).join('\n\n')
+      userMessage = refs + (text ? '\n\n' + text : '')
     } else {
       userMessage = text
     }
 
-    // Display message in chat
+    // Display message in chat (simplified, without HTML dump)
     const displayMessage = this.cardRefs.length > 0 
       ? this.cardRefs.map(c => `📌${c.title}`).join(' ') + (text ? ' ' + text : '')
       : text
@@ -113,12 +133,15 @@ Alpine.data('chatBox', () => ({
     this.currentMessageIndex = -1
 
     try {
-      // Include session_id for conversation continuity within this tab
-      const params = new URLSearchParams({ 
-        message: userMessage,
-        session_id: this.sessionId
+      // POST request with JSON body
+      const response = await fetch('/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          session_id: this.sessionId
+        })
       })
-      const response = await fetch('/chat/stream?' + params)
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
