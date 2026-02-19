@@ -243,7 +243,7 @@
 .dashboard-grid {
   position: relative;
   width: 100%;
-  min-height: calc(100vh - 200px);
+  min-height: 400px;
   /* Grid settings */
   --grid-size: 80px;
   --grid-gap: 12px;
