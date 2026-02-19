@@ -40,6 +40,32 @@
     border-color: var(--kb-bg-hover);
   }
   
+  /* Sortable drag styles */
+  .sortable-ghost {
+    opacity: 0.4;
+  }
+  
+  .sortable-chosen {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+  
+  .sortable-drag {
+    opacity: 1 !important;
+  }
+  
+  .card-drag-handle {
+    touch-action: none;
+  }
+  
+  .card-drag-handle:active {
+    cursor: grabbing;
+  }
+  
+  /* Disable masonry transition during drag */
+  .dashboard-grid.dragging .card {
+    transition: none !important;
+  }
+  
   .card-small {
     /* Uses default width from media queries */
   }

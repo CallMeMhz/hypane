@@ -9,6 +9,19 @@
   <!-- Card Header -->
   <div class="flex items-center justify-between mb-3 group/header">
     <div class="flex items-center gap-2 relative">
+      <!-- Drag handle -->
+      <div class="card-drag-handle cursor-grab opacity-0 group-hover/header:opacity-100 transition-opacity duration-200"
+           style="color: var(--kb-text-ghost);"
+           title="Drag to reorder">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="6" r="1.5"/>
+          <circle cx="15" cy="6" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/>
+          <circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="18" r="1.5"/>
+          <circle cx="15" cy="18" r="1.5"/>
+        </svg>
+      </div>
       {% if card.titleColor %}
         <h3 class="text-sm font-medium" style="color: {{ card.titleColor }}">{{ card.title }}</h3>
       {% elif card.titleClass %}

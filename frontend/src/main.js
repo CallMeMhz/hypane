@@ -8,6 +8,9 @@ window.htmx = htmx
 // Masonry layout
 import Masonry from 'masonry-layout'
 
+// Sortable for drag-and-drop
+import Sortable from 'sortablejs'
+
 // Markdown
 import { marked } from 'marked'
 
@@ -29,6 +32,7 @@ window.renderMarkdown = function(text) {
 
 // Initialize or refresh masonry layout
 let masonryInstance = null
+let sortableInstance = null
 
 function initMasonry() {
   const grid = document.getElementById('dashboard-cards')
@@ -44,6 +48,62 @@ function initMasonry() {
     gutter: 16,
     percentPosition: true,
     transitionDuration: '0.2s'
+  })
+  
+  // Initialize sortable after masonry
+  initSortable(grid)
+}
+
+function initSortable(grid) {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+  }
+  
+  sortableInstance = new Sortable(grid, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    handle: '.card-drag-handle',
+    filter: '.card-sizer', // Don't drag the sizer element
+    draggable: '.card',
+    
+    onStart: function() {
+      // Disable masonry during drag
+      if (masonryInstance) {
+        grid.classList.add('dragging')
+      }
+    },
+    
+    onEnd: async function(evt) {
+      grid.classList.remove('dragging')
+      
+      // Get new order of card IDs
+      const cards = grid.querySelectorAll('.card')
+      const cardIds = Array.from(cards).map(el => {
+        const id = el.id.replace('card-', '')
+        return id
+      }).filter(id => id) // Filter out empty
+      
+      // Save new order to backend
+      try {
+        await fetch('/api/cards/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cardIds })
+        })
+      } catch (e) {
+        console.error('Failed to save card order:', e)
+      }
+      
+      // Re-layout masonry
+      if (masonryInstance) {
+        setTimeout(() => {
+          masonryInstance.reloadItems()
+          masonryInstance.layout()
+        }, 50)
+      }
+    }
   })
 }
 
