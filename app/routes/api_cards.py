@@ -59,6 +59,36 @@ async def get_card(card_id: str):
     raise HTTPException(status_code=404, detail="Card not found")
 
 
+# Minimum sizes per card type
+MIN_SIZES = {
+    'weather': (3, 2),
+    'todo': (2, 2),
+    'news-single': (3, 2),
+    'news-bundle': (4, 3),
+    'crypto': (2, 2),
+    'crypto-bundle': (3, 3),
+    'reminder': (2, 2),
+    'countdown': (2, 2),
+    'chat': (4, 3),
+}
+
+def enforce_min_size(card_type: str, size: str) -> str:
+    """Ensure size meets minimum for card type."""
+    min_w, min_h = MIN_SIZES.get(card_type, (2, 2))
+    
+    if 'x' in size:
+        parts = size.split('x')
+        w = int(parts[0])
+        h = int(parts[1])
+    else:
+        # Legacy size
+        return size
+    
+    w = max(w, min_w)
+    h = max(h, min_h)
+    return f"{w}x{h}"
+
+
 @router.post("")
 async def create_card(request: CreateCardRequest):
     """Create a new card."""
@@ -68,6 +98,9 @@ async def create_card(request: CreateCardRequest):
     now = datetime.now(timezone.utc)
     timestamp = now.strftime("%Y%m%d%H%M%S")
     card_id = f"{request.type}-{timestamp}-{uuid.uuid4().hex[:4]}"
+    
+    # Enforce minimum size for card type
+    size = enforce_min_size(request.type, request.size)
     
     # Normalize content - parse JSON string if needed
     content = request.content
@@ -85,9 +118,9 @@ async def create_card(request: CreateCardRequest):
         max_y = 0
         for c in existing_cards:
             pos = c.get("position", {})
-            size = c.get("size", "3x2")
-            if "x" in size:
-                h = int(size.split("x")[1])
+            card_size = c.get("size", "3x2")
+            if "x" in card_size:
+                h = int(card_size.split("x")[1])
             else:
                 h = 2
             card_bottom = pos.get("y", 0) + h
@@ -101,7 +134,7 @@ async def create_card(request: CreateCardRequest):
         "title": request.title,
         "content": content,
         "position": position,
-        "size": request.size,
+        "size": size,
         "createdAt": now.isoformat().replace("+00:00", "Z"),
         "updatedAt": now.isoformat().replace("+00:00", "Z"),
     }
@@ -146,7 +179,7 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                 else:
                     card["content"] = request.content
             if request.size is not None:
-                card["size"] = request.size
+                card["size"] = enforce_min_size(card.get("type", ""), request.size)
             if request.type is not None:
                 card["type"] = request.type
             if request.position is not None:

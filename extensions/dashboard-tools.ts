@@ -85,7 +85,15 @@ export default function (pi: ExtensionAPI) {
 Types: weather, todo, countdown, reminder, news-bundle, crypto-bundle, or custom (use content.html).
 
 Size format: "WxH" where W=columns(1-12), H=rows(1-8). Each unit is 80px.
-Examples: "3x2" (default, 240×160px), "4x3" (320×240px), "6x2" (wide), "3x4" (tall)
+Examples: "3x2" (240×160px), "4x3" (320×240px), "6x2" (wide), "3x4" (tall)
+
+Minimum sizes per type (cannot go smaller):
+- weather: 3x2
+- todo, crypto, reminder, countdown: 2x2
+- news-single: 3x2
+- news-bundle: 4x3
+- crypto-bundle: 3x3
+- chat: 4x3
 
 Position format: {x, y} grid coordinates. {x:0, y:0} is top-left.
 Cards can overlap like sticky notes on a board.`,

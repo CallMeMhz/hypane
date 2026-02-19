@@ -23,7 +23,7 @@
   'countdown': '2x2',
   'chat': '4x3'
 } %}
-{% set min_size = min_sizes.get(card.type, '2x2') %}
+{% set min_size = min_sizes[card.type] if card.type in min_sizes else '2x2' %}
 <div 
   id="card-{{ card.id }}"
   class="card {{ size_class }}"
