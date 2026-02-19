@@ -112,30 +112,46 @@ function findAvailablePosition(w, h, excludeId) {
   return { x: 0, y: 0 }
 }
 
-// Push cards down to make room (Microsoft-style reflow)
-function reflowCards(movedCard, newX, newY) {
-  const cards = gridState.cards.filter(c => c.id !== movedCard.id)
+// Compact all cards - reflow to fill gaps (like Windows Start)
+function compactCards(excludeId = null) {
+  // Sort cards by original position (top-left to bottom-right)
+  const cardsToPlace = gridState.cards
+    .filter(c => c.id !== excludeId)
+    .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
   
-  // Sort by position (top-left to bottom-right)
-  cards.sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
+  // Place the excluded card first (if any)
+  const placedCards = []
+  const excludedCard = gridState.cards.find(c => c.id === excludeId)
+  if (excludedCard) {
+    placedCards.push(excludedCard)
+  }
   
-  // Check each card for overlap with moved card
-  for (const card of cards) {
-    if (newX < card.x + card.w &&
-        newX + movedCard.w > card.x &&
-        newY < card.y + card.h &&
-        newY + movedCard.h > card.y) {
-      
-      // This card overlaps - push it down
-      const pushY = newY + movedCard.h
-      
-      // Update position
-      card.y = pushY
-      card.el.style.top = `calc(${pushY} * (var(--cell-size) + var(--grid-gap)))`
-      card.el.dataset.gridY = pushY
-      
-      // Recursively reflow cards that this one might now overlap
-      reflowCards(card, card.x, card.y)
+  // Place each card in the first available position
+  for (const card of cardsToPlace) {
+    let placed = false
+    
+    // Try to find a spot from top-left
+    for (let y = 0; y < 100 && !placed; y++) {
+      for (let x = 0; x <= GRID_COLS - card.w && !placed; x++) {
+        // Check overlap with already placed cards
+        let overlaps = false
+        for (const placed of placedCards) {
+          if (x < placed.x + placed.w &&
+              x + card.w > placed.x &&
+              y < placed.y + placed.h &&
+              y + card.h > placed.y) {
+            overlaps = true
+            break
+          }
+        }
+        
+        if (!overlaps) {
+          card.x = x
+          card.y = y
+          placedCards.push(card)
+          placed = true
+        }
+      }
     }
   }
 }
@@ -247,11 +263,12 @@ function initCardDrag() {
       dragPlaceholder.style.left = `calc(${newX} * (var(--cell-size) + var(--grid-gap)))`
       dragPlaceholder.style.top = `calc(${newY} * (var(--cell-size) + var(--grid-gap)))`
       
-      // Check for overlaps and reflow
+      // Update dragged card position and recompact
       if (newX !== cardState.x || newY !== cardState.y) {
         cardState.x = newX
         cardState.y = newY
-        reflowCards(cardState, newX, newY)
+        // Recompact all other cards around the dragged card
+        compactCards(cardState.id)
         applyPositions()
       }
     }
@@ -337,7 +354,7 @@ function initCardResize() {
       
       if (newW !== cardState.w || newH !== cardState.h) {
         updateCardSize(newW, newH)
-        reflowCards(cardState, cardState.x, cardState.y)
+        compactCards(cardState.id)
         applyPositions()
       }
     }
