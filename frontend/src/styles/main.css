@@ -11,6 +11,9 @@
 /* Enable dark mode via class */
 @variant dark (&:where(.dark, .dark *));
 
+/* Alpine.js cloak */
+[x-cloak] { display: none !important; }
+
 /* Custom styles */
 @layer components {
   /* Cards */
@@ -108,6 +111,9 @@
   .dashboard-grid .card-large {
     width: 100%;
   }
+  .dashboard-grid .card-full {
+    width: 100%;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -121,6 +127,9 @@
   .dashboard-grid .card-large {
     width: calc(66.666% - 5px);
   }
+  .dashboard-grid .card-full {
+    width: 100%;
+  }
 }
 
 @media (min-width: 1280px) {
@@ -133,6 +142,9 @@
   }
   .dashboard-grid .card-large {
     width: calc(75% - 4px);
+  }
+  .dashboard-grid .card-full {
+    width: 100%;
   }
 }
 

@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from app.config import DASHBOARD_FILE
+from app.services.card_data import get_card_data
 
 
 def _normalize_card(card: dict[str, Any]) -> dict[str, Any]:
@@ -15,8 +16,23 @@ def _normalize_card(card: dict[str, Any]) -> dict[str, Any]:
     return card
 
 
-def get_dashboard() -> dict[str, Any]:
-    """Read dashboard.json and return its content."""
+def _enrich_card(card: dict[str, Any]) -> dict[str, Any]:
+    """Enrich card with live data from providers."""
+    live_data = get_card_data(card)
+    if live_data:
+        # Merge live data into content
+        card = card.copy()
+        card["content"] = {**card.get("content", {}), **live_data}
+    return card
+
+
+def get_dashboard(enrich: bool = True) -> dict[str, Any]:
+    """
+    Read dashboard.json and return its content.
+    
+    Args:
+        enrich: If True, enrich cards with live data from providers
+    """
     if not DASHBOARD_FILE.exists():
         return {"cards": [], "userPreferences": {}}
     
@@ -24,7 +40,13 @@ def get_dashboard() -> dict[str, Any]:
         data = json.load(f)
     
     # Normalize all cards
-    data["cards"] = [_normalize_card(card) for card in data.get("cards", [])]
+    cards = [_normalize_card(card) for card in data.get("cards", [])]
+    
+    # Enrich with live data
+    if enrich:
+        cards = [_enrich_card(card) for card in cards]
+    
+    data["cards"] = cards
     return data
 
 

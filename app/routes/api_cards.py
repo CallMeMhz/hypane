@@ -27,8 +27,13 @@ class UpdateCardRequest(BaseModel):
     content: Optional[Any] = None
     size: Optional[str] = None
     type: Optional[str] = None
+    position: Optional[int] = None  # For reordering
     titleColor: Optional[str] = None
     titleClass: Optional[str] = None
+
+
+class ReorderCardsRequest(BaseModel):
+    cardIds: List[str]  # Cards in desired order
 
 
 class MergeCardsRequest(BaseModel):
@@ -128,6 +133,8 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                 card["size"] = request.size
             if request.type is not None:
                 card["type"] = request.type
+            if request.position is not None:
+                card["position"] = {"order": request.position}
             if request.titleColor is not None:
                 card["titleColor"] = request.titleColor
             if request.titleClass is not None:
@@ -135,6 +142,10 @@ async def update_card(card_id: str, request: UpdateCardRequest):
             
             card["updatedAt"] = now.isoformat().replace("+00:00", "Z")
             dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+            
+            # Re-sort cards by position
+            dashboard["cards"].sort(key=lambda c: c.get("position", {}).get("order", 999))
+            
             save_dashboard(dashboard)
             
             # Create snapshot
@@ -180,6 +191,42 @@ async def delete_card(card_id: str):
     )
     
     return {"deleted": card_id}
+
+
+@router.post("/reorder")
+async def reorder_cards(request: ReorderCardsRequest):
+    """Reorder cards by providing the card IDs in desired order."""
+    dashboard = get_dashboard()
+    cards = dashboard.get("cards", [])
+    
+    # Create a map of cards by ID
+    card_map = {c["id"]: c for c in cards}
+    
+    # Validate all IDs exist
+    for card_id in request.cardIds:
+        if card_id not in card_map:
+            raise HTTPException(status_code=404, detail=f"Card not found: {card_id}")
+    
+    # Update positions
+    now = datetime.now(timezone.utc)
+    for i, card_id in enumerate(request.cardIds):
+        card_map[card_id]["position"] = {"order": i}
+        card_map[card_id]["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+    
+    # Sort cards by new positions
+    dashboard["cards"].sort(key=lambda c: c.get("position", {}).get("order", 999))
+    dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
+    save_dashboard(dashboard)
+    
+    # Create snapshot
+    create_snapshot(
+        dashboard,
+        action="reorder",
+        details=f"Reordered {len(request.cardIds)} cards",
+        card_id=None
+    )
+    
+    return {"reordered": request.cardIds}
 
 
 @router.post("/merge")

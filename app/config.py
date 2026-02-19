@@ -15,5 +15,10 @@ SESSIONS_DIR = DATA_DIR / "sessions"
 
 # Agent
 PI_COMMAND = "pi"
-SYSTEM_SKILL = SKILLS_DIR / "_system.md"
 DASHBOARD_EXTENSION = EXTENSIONS_DIR / "dashboard-tools.ts"
+
+# Skills to load
+SKILLS = [
+    SKILLS_DIR / "_system.md",
+    SKILLS_DIR / "data_collection.md",
+]

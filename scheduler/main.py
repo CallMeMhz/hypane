@@ -1,10 +1,9 @@
 """
 定时任务调度器
 
-根据 data/tasks.json 配置执行定时任务。
 任务类型：
-- script: 执行 Python 脚本
-- agent: 调用 pi agent 执行 skill
+- collector: 数据采集（写入历史）
+- agent: 调用 pi agent 执行复杂任务
 """
 
 import json
@@ -36,48 +35,61 @@ def load_tasks() -> list[dict]:
         return json.load(f).get("tasks", [])
 
 
-def run_script(script_path: str, task_name: str):
-    """执行脚本任务"""
-    logger.info(f"Running script task: {task_name}")
-    full_path = BASE_DIR / script_path
+def run_collector(collector: str, args: dict, task_name: str):
+    """执行数据采集任务"""
+    logger.info(f"Running collector: {task_name}")
     
     try:
-        result = subprocess.run(
-            ["python", str(full_path)],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        if result.returncode == 0:
-            logger.info(f"Task {task_name} completed successfully")
+        if collector == "weather":
+            from collectors.weather import collect
+            locations = args.get("locations", ["Singapore"])
+            collect(locations)
+        elif collector == "crypto":
+            from collectors.crypto import collect
+            symbols = args.get("symbols", ["BTC", "ETH"])
+            collect(symbols)
+        elif collector == "hackernews":
+            from collectors.hackernews import collect
+            limit = args.get("limit", 20)
+            collect(limit)
+        elif collector == "source":
+            # 执行信源
+            from collectors.executor import run_source_sync
+            source_id = args.get("source_id")
+            if source_id:
+                run_source_sync(source_id)
         else:
-            logger.error(f"Task {task_name} failed: {result.stderr}")
-    except subprocess.TimeoutExpired:
-        logger.error(f"Task {task_name} timed out")
+            logger.error(f"Unknown collector: {collector}")
+            return
+        
+        logger.info(f"Collector {task_name} completed")
     except Exception as e:
-        logger.error(f"Task {task_name} error: {e}")
+        logger.error(f"Collector {task_name} error: {e}")
 
 
-def run_agent(skill_path: str, task_name: str):
+def run_agent(skill_path: str, prompt: str, task_name: str):
     """执行 Agent 任务"""
     logger.info(f"Running agent task: {task_name}")
     full_path = BASE_DIR / skill_path
+    extension_path = BASE_DIR / "extensions" / "dashboard-tools.ts"
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     
     try:
         result = subprocess.run(
             [
                 "pi",
-                "-p", f"执行定时任务: {task_name}",
+                "-p", prompt,
                 "--skill", str(full_path),
-                "--session-dir", str(SESSIONS_DIR),
+                "-e", str(extension_path),
+                "--mode", "text",
             ],
             capture_output=True,
             text=True,
             timeout=300,
         )
         if result.returncode == 0:
-            logger.info(f"Agent task {task_name} completed successfully")
+            logger.info(f"Agent task {task_name} completed")
+            logger.debug(f"Output: {result.stdout[:500]}")
         else:
             logger.error(f"Agent task {task_name} failed: {result.stderr}")
     except subprocess.TimeoutExpired:
@@ -99,11 +111,11 @@ def main():
         try:
             trigger = CronTrigger.from_crontab(task["schedule"])
             
-            if task["type"] == "script":
+            if task["type"] == "collector":
                 scheduler.add_job(
-                    run_script,
+                    run_collector,
                     trigger,
-                    args=[task["script"], task["name"]],
+                    args=[task["collector"], task.get("args", {}), task["name"]],
                     id=task["id"],
                     name=task["name"],
                 )
@@ -111,7 +123,7 @@ def main():
                 scheduler.add_job(
                     run_agent,
                     trigger,
-                    args=[task["skill"], task["name"]],
+                    args=[task["skill"], task.get("prompt", "执行任务"), task["name"]],
                     id=task["id"],
                     name=task["name"],
                 )

@@ -6,17 +6,37 @@ import sys
 from datetime import datetime, timezone
 from typing import AsyncIterator, Optional
 
-from app.config import PI_COMMAND, SYSTEM_SKILL, SESSIONS_DIR, DASHBOARD_EXTENSION
+from app.config import PI_COMMAND, SKILLS, SESSIONS_DIR, DASHBOARD_EXTENSION
+from app.services.dashboard import get_dashboard
 
 # 增大行缓冲区限制到 10MB
 STREAM_LIMIT = 10 * 1024 * 1024
 
 
 def get_system_context() -> str:
-    """Generate system context with current time."""
+    """Generate system context with current time and dashboard outline."""
     now = datetime.now()
     utc_now = datetime.now(timezone.utc)
-    return f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} (local), {utc_now.strftime('%Y-%m-%d %H:%M:%S')} UTC"
+    
+    # Time
+    lines = [f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} (local)"]
+    
+    # Dashboard outline
+    dashboard = get_dashboard()
+    cards = dashboard.get("cards", [])
+    
+    if cards:
+        lines.append(f"\nDashboard ({len(cards)} cards):")
+        for i, card in enumerate(cards):
+            card_id = card.get("id", "?")
+            card_type = card.get("type", "?")
+            card_title = card.get("title", "(no title)")
+            card_size = card.get("size", "medium")
+            lines.append(f"  {i+1}. [{card_id}] {card_type} - {card_title} ({card_size})")
+    else:
+        lines.append("\nDashboard: empty (no cards)")
+    
+    return "\n".join(lines)
 
 
 async def run_agent_chat(message: str) -> dict:
@@ -26,10 +46,13 @@ async def run_agent_chat(message: str) -> dict:
     cmd = [
         PI_COMMAND,
         "-p", message,
-        "--skill", str(SYSTEM_SKILL),
         "--session-dir", str(SESSIONS_DIR),
         "--mode", "text",
     ]
+    
+    # Add all skills
+    for skill in SKILLS:
+        cmd.extend(["--skill", str(skill)])
 
     try:
         result = await asyncio.to_thread(
@@ -88,10 +111,13 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
     cmd = [
         PI_COMMAND,
         "-p", full_message,
-        "--skill", str(SYSTEM_SKILL),
         "-e", str(DASHBOARD_EXTENSION),
         "--mode", "json",
     ]
+    
+    # Add all skills
+    for skill in SKILLS:
+        cmd.extend(["--skill", str(skill)])
     
     # Only add session if provided
     if session_file:

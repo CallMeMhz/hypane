@@ -1,37 +1,38 @@
 /**
- * Dashboard Tools Extension for pi
+ * Dashboard Tools Extension
  * 
- * Provides tools for the AI agent to manage dashboard cards
- * through a structured API instead of direct file manipulation.
+ * 只提供 Dashboard 卡片管理的核心工具。
+ * 数据采集、信源管理等通过 Skill + 文件操作完成。
  */
 
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 
 const DASHBOARD_API = process.env.DASHBOARD_API || "http://localhost:8000";
 
-export default function (pi: any) {
-  
-  // Tool: List all cards
+export default function (pi: ExtensionAPI) {
+  // Tool: List cards
   pi.registerTool({
     name: "dashboard_list_cards",
     label: "List Dashboard Cards",
-    description: "List all cards currently on the dashboard. Returns card IDs, types, titles.",
+    description: "List all cards on the dashboard with their IDs and types.",
     parameters: Type.Object({}),
 
     async execute() {
       try {
         const response = await fetch(`${DASHBOARD_API}/api/cards`);
-        if (!response.ok) {
-          return { content: [{ type: "text", text: `Error: ${response.status} ${response.statusText}` }] };
-        }
         const cards = await response.json();
-        
-        const summary = cards.map((card: any) => 
-          `- [${card.id}] ${card.type}: ${card.title}`
-        ).join("\n");
-        
+
+        if (cards.length === 0) {
+          return { content: [{ type: "text", text: "No cards on dashboard." }] };
+        }
+
+        const summary = cards
+          .map((c: any) => `- [${c.id}] ${c.type}: ${c.title || "(no title)"}`)
+          .join("\n");
+
         return {
-          content: [{ type: "text", text: summary || "No cards on dashboard" }],
+          content: [{ type: "text", text: `Dashboard cards:\n${summary}` }],
           details: { cards },
         };
       } catch (error) {
@@ -40,25 +41,24 @@ export default function (pi: any) {
     },
   });
 
-  // Tool: Get card details
+  // Tool: Get card
   pi.registerTool({
     name: "dashboard_get_card",
     label: "Get Card Details",
-    description: "Get full details of a specific card by ID.",
+    description: "Get full details of a specific card.",
     parameters: Type.Object({
-      cardId: Type.String({ description: "The card ID to retrieve" }),
+      cardId: Type.String({ description: "Card ID" }),
     }),
 
     async execute(_toolCallId: string, params: { cardId: string }) {
       try {
         const response = await fetch(`${DASHBOARD_API}/api/cards/${params.cardId}`);
         if (!response.ok) {
-          return { content: [{ type: "text", text: `Error: Card not found (${response.status})` }] };
+          return { content: [{ type: "text", text: `Card not found: ${params.cardId}` }] };
         }
         const card = await response.json();
-        
         return {
-          content: [{ type: "text", text: JSON.stringify(card, null, 2) }],
+          content: [{ type: "text", text: `Card ${params.cardId}:\n${JSON.stringify(card, null, 2)}` }],
           details: { card },
         };
       } catch (error) {
@@ -67,46 +67,29 @@ export default function (pi: any) {
     },
   });
 
-  // Tool: Create a new card
+  // Tool: Create card
   pi.registerTool({
     name: "dashboard_create_card",
     label: "Create Dashboard Card",
-    description: `Create a new card on the dashboard.
-You can use any type name. Common types: weather, todo, news-bundle, crypto, crypto-bundle, reminder.
-Use content.html for custom HTML rendering with Tailwind CSS.
-Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
+    description: `Create a new card. Types: weather, todo, countdown, reminder, news-bundle, crypto-bundle, or custom (use content.html).`,
     parameters: Type.Object({
-      type: Type.String({ description: "Card type (e.g. weather, todo, crypto, or any custom type)" }),
+      type: Type.String({ description: "Card type" }),
       title: Type.String({ description: "Card title" }),
-      content: Type.Any({ description: "Card content. Use {html: '...'} for custom HTML rendering" }),
-      size: Type.Optional(Type.String({ description: "Card size: small, medium, or large" })),
-      titleColor: Type.Optional(Type.String({ description: "Title color as CSS value" })),
-      titleClass: Type.Optional(Type.String({ description: "Title CSS classes" })),
+      content: Type.Any({ description: "Card content (type-specific)" }),
+      size: Type.Optional(Type.String({ description: "small | medium | large" })),
+      position: Type.Optional(Type.Number({ description: "Position index" })),
     }),
 
-    async execute(_toolCallId: string, params: { type: string; title: string; content: any; size?: string; titleColor?: string; titleClass?: string }) {
+    async execute(_toolCallId: string, params: any) {
       try {
         const response = await fetch(`${DASHBOARD_API}/api/cards`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: params.type,
-            title: params.title,
-            content: params.content,
-            size: params.size || "medium",
-            titleColor: params.titleColor,
-            titleClass: params.titleClass,
-          }),
+          body: JSON.stringify(params),
         });
-        
-        if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error creating card: ${error}` }] };
-        }
-        
         const card = await response.json();
         return {
-          content: [{ type: "text", text: `Created card: ${card.id} (${card.type}: ${card.title})` }],
+          content: [{ type: "text", text: `Created card: ${card.id} (${card.type})` }],
           details: { card },
         };
       } catch (error) {
@@ -115,38 +98,39 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     },
   });
 
-  // Tool: Update a card
+  // Tool: Update card
   pi.registerTool({
     name: "dashboard_update_card",
     label: "Update Dashboard Card",
-    description: "Update an existing card's title, content, size, or type. Only provide fields you want to change.",
+    description: "Update a card's properties. Size options: small (1 col), medium (2 col), large (3 col), full (100% width). Use position to reorder.",
     parameters: Type.Object({
-      cardId: Type.String({ description: "The card ID to update" }),
-      title: Type.Optional(Type.String({ description: "New title" })),
-      content: Type.Optional(Type.Any({ description: "New content (partial update supported)" })),
-      size: Type.Optional(Type.String({ description: "Card size: small, medium, or large" })),
-      type: Type.Optional(Type.String({ description: "Change card type" })),
+      cardId: Type.String({ description: "Card ID to update" }),
+      updates: Type.Any({ description: "Fields: size (small/medium/large/full), position (number), title, content, etc" }),
     }),
 
-    async execute(_toolCallId: string, params: { cardId: string; title?: string; content?: any; size?: string; type?: string }) {
+    async execute(_toolCallId: string, params: { cardId: string; updates: any }) {
       try {
-        const updateData: any = {};
-        if (params.title) updateData.title = params.title;
-        if (params.content) updateData.content = params.content;
-        if (params.size) updateData.size = params.size;
-        if (params.type) updateData.type = params.type;
-
+        // Ensure updates is an object (handle string input)
+        let updates = params.updates;
+        if (typeof updates === "string") {
+          try {
+            updates = JSON.parse(updates);
+          } catch {
+            // keep as-is if not valid JSON
+          }
+        }
+        
         const response = await fetch(`${DASHBOARD_API}/api/cards/${params.cardId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updateData),
+          body: JSON.stringify(updates),
         });
-        
+
         if (!response.ok) {
           const error = await response.text();
-          return { content: [{ type: "text", text: `Error updating card: ${error}` }] };
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
         }
-        
+
         const card = await response.json();
         return {
           content: [{ type: "text", text: `Updated card: ${card.id}` }],
@@ -158,13 +142,13 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     },
   });
 
-  // Tool: Delete a card
+  // Tool: Delete card
   pi.registerTool({
     name: "dashboard_delete_card",
     label: "Delete Dashboard Card",
-    description: "Remove a card from the dashboard.",
+    description: "Delete a card from the dashboard.",
     parameters: Type.Object({
-      cardId: Type.String({ description: "The card ID to delete" }),
+      cardId: Type.String({ description: "Card ID to delete" }),
     }),
 
     async execute(_toolCallId: string, params: { cardId: string }) {
@@ -172,15 +156,13 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
         const response = await fetch(`${DASHBOARD_API}/api/cards/${params.cardId}`, {
           method: "DELETE",
         });
-        
+
         if (!response.ok) {
           const error = await response.text();
-          return { content: [{ type: "text", text: `Error deleting card: ${error}` }] };
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
         }
-        
-        return {
-          content: [{ type: "text", text: `Deleted card: ${params.cardId}` }],
-        };
+
+        return { content: [{ type: "text", text: `Deleted card: ${params.cardId}` }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${error}` }] };
       }
@@ -190,29 +172,27 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
   // Tool: Merge cards
   pi.registerTool({
     name: "dashboard_merge_cards",
-    label: "Merge Dashboard Cards",
-    description: "Merge multiple cards of the same type into a single bundled card. Works for: crypto → crypto-bundle, news-single → news-bundle.",
+    label: "Merge Cards into Bundle",
+    description: "Merge multiple similar cards into a bundle card.",
     parameters: Type.Object({
-      cardIds: Type.Array(Type.String(), { description: "Array of card IDs to merge" }),
-      newTitle: Type.String({ description: "Title for the merged card" }),
+      cardIds: Type.Array(Type.String(), { description: "Card IDs to merge" }),
+      bundleType: Type.String({ description: "Bundle type (news-bundle, crypto-bundle, etc)" }),
+      title: Type.String({ description: "Bundle title" }),
     }),
 
-    async execute(_toolCallId: string, params: { cardIds: string[]; newTitle: string }) {
+    async execute(_toolCallId: string, params: { cardIds: string[]; bundleType: string; title: string }) {
       try {
         const response = await fetch(`${DASHBOARD_API}/api/cards/merge`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cardIds: params.cardIds,
-            title: params.newTitle,
-          }),
+          body: JSON.stringify(params),
         });
-        
+
         if (!response.ok) {
           const error = await response.text();
-          return { content: [{ type: "text", text: `Error merging cards: ${error}` }] };
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
         }
-        
+
         const card = await response.json();
         return {
           content: [{ type: "text", text: `Merged ${params.cardIds.length} cards into: ${card.id}` }],
@@ -224,39 +204,32 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     },
   });
 
-  // Tool: Get changelog
+  // Tool: View changelog
   pi.registerTool({
     name: "dashboard_changelog",
-    label: "Dashboard Changelog",
-    description: "View recent changes to the dashboard. Shows what cards were created, updated, deleted, or merged.",
+    label: "View Dashboard Changelog",
+    description: "View recent changes to the dashboard.",
     parameters: Type.Object({
-      limit: Type.Optional(Type.Number({ description: "Number of entries to return (default 10)" })),
+      limit: Type.Optional(Type.Number({ description: "Max entries (default 20)" })),
     }),
 
     async execute(_toolCallId: string, params: { limit?: number }) {
       try {
-        const limit = params.limit || 10;
-        const response = await fetch(`${DASHBOARD_API}/api/changelog?limit=${limit}`);
-        
-        if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error: ${error}` }] };
+        const limit = params.limit || 20;
+        const response = await fetch(`${DASHBOARD_API}/api/cards/changelog?limit=${limit}`);
+        const changelog = await response.json();
+
+        if (changelog.length === 0) {
+          return { content: [{ type: "text", text: "No changes recorded." }] };
         }
-        
-        const entries = await response.json();
-        
-        if (entries.length === 0) {
-          return { content: [{ type: "text", text: "No changes recorded yet." }] };
-        }
-        
-        const summary = entries.map((e: any) => {
-          const time = e.timestamp.replace("T", " ").replace("Z", "");
-          return `- [${e.id}] ${time} | ${e.action}: ${e.details || e.cardId || ""}`;
-        }).join("\n");
-        
+
+        const summary = changelog
+          .map((e: any) => `${e.timestamp.slice(11, 19)} ${e.action}: ${e.cardId} (${e.cardType})`)
+          .join("\n");
+
         return {
           content: [{ type: "text", text: `Recent changes:\n${summary}` }],
-          details: { entries },
+          details: { changelog },
         };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${error}` }] };
@@ -264,31 +237,29 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     },
   });
 
-  // Tool: Get snapshot
+  // Tool: View snapshot
   pi.registerTool({
     name: "dashboard_snapshot",
     label: "View Dashboard Snapshot",
-    description: "View the dashboard state at a specific point in time. Use dashboard_changelog to find snapshot IDs.",
+    description: "View a past snapshot of the dashboard.",
     parameters: Type.Object({
-      snapshotId: Type.String({ description: "The snapshot ID from changelog" }),
+      snapshotId: Type.String({ description: "Snapshot ID (from changelog)" }),
     }),
 
     async execute(_toolCallId: string, params: { snapshotId: string }) {
       try {
-        const response = await fetch(`${DASHBOARD_API}/api/snapshots/${params.snapshotId}`);
-        
+        const response = await fetch(`${DASHBOARD_API}/api/cards/snapshot/${params.snapshotId}`);
+
         if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error: ${error}` }] };
+          return { content: [{ type: "text", text: `Snapshot not found: ${params.snapshotId}` }] };
         }
-        
+
         const snapshot = await response.json();
         const cards = snapshot.cards || [];
-        
-        const summary = cards.map((c: any) => 
-          `- [${c.id}] ${c.type}: ${c.title}`
-        ).join("\n");
-        
+        const summary = cards
+          .map((c: any) => `- [${c.id}] ${c.type}: ${c.title || "(no title)"}`)
+          .join("\n");
+
         return {
           content: [{ type: "text", text: `Snapshot ${params.snapshotId} (${cards.length} cards):\n${summary}` }],
           details: { snapshot },
@@ -299,5 +270,36 @@ Title can have custom colors via titleColor (CSS) or titleClass (Tailwind).`,
     },
   });
 
-  console.error("[Dashboard Extension] Registered 8 tools");
+  // Tool: Reorder cards
+  pi.registerTool({
+    name: "dashboard_reorder_cards",
+    label: "Reorder Dashboard Cards",
+    description: "Reorder all cards by providing card IDs in the desired display order. This is the best way to rearrange the dashboard layout.",
+    parameters: Type.Object({
+      cardIds: Type.Array(Type.String(), { description: "Card IDs in desired order (first = top-left)" }),
+    }),
+
+    async execute(_toolCallId: string, params: { cardIds: string[] }) {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/cards/reorder`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cardIds: params.cardIds }),
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          return { content: [{ type: "text", text: `Error: ${error}` }] };
+        }
+
+        return {
+          content: [{ type: "text", text: `Reordered ${params.cardIds.length} cards successfully.` }],
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  console.error("[Dashboard Extension] Registered 9 tools");
 }
