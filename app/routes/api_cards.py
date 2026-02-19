@@ -70,6 +70,7 @@ MIN_SIZES = {
     'reminder': (2, 2),
     'countdown': (2, 2),
     'chat': (4, 3),
+    'cookie-clicker': (3, 4),
 }
 
 def enforce_min_size(card_type: str, size: str) -> str:
