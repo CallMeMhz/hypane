@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 pb-24">
+  <!-- Header -->
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800">AI Dashboard</h1>
+    <p class="text-gray-500 mt-1">你的个人智能助理</p>
+  </header>
+
+  <!-- Dashboard Cards Grid -->
+  <div id="dashboard-cards" 
+       class="dashboard-grid"
+       hx-get="/dashboard-cards" 
+       hx-trigger="refresh from:body">
+    {% for card in cards %}
+      {% include "partials/card.html" %}
+    {% else %}
+      <div class="col-span-full text-center text-gray-400 py-12">
+        <p class="text-lg">还没有卡片</p>
+        <p class="text-sm mt-2">通过下方聊天框和 AI 助理对话，开始添加内容吧</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Chat Box -->
+{% include "components/chat_box.html" %}
+{% endblock %}

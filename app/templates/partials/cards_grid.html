@@ -1,0 +1,9 @@
+<!-- Cards Grid Partial - for HTMX refresh -->
+{% for card in cards %}
+  {% include "partials/card.html" %}
+{% else %}
+  <div class="col-span-full text-center text-gray-400 py-12">
+    <p class="text-lg">还没有卡片</p>
+    <p class="text-sm mt-2">通过下方聊天框和 AI 助理对话，开始添加内容吧</p>
+  </div>
+{% endfor %}

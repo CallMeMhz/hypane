@@ -1,0 +1,19 @@
+<!-- News Bundle Card Content -->
+<div class="space-y-3">
+  {% for item in card.content["items"] %}
+  <div class="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+    <h4 class="font-medium text-gray-800 text-sm">
+      {% if item.url %}
+      <a href="{{ item.url }}" target="_blank" class="hover:text-sky-500">
+        {{ item.title }}
+      </a>
+      {% else %}
+      {{ item.title }}
+      {% endif %}
+    </h4>
+    {% if item.summary %}
+    <p class="text-gray-500 text-xs mt-1">{{ item.summary }}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,19 @@
+<!-- Todo Card Content -->
+<ul class="space-y-2">
+  {% for item in card.content["items"] %}
+  <li class="flex items-center gap-2">
+    <span class="w-5 h-5 flex items-center justify-center rounded border {{ 'bg-green-100 border-green-300 text-green-600' if item.done else 'border-gray-300' }}">
+      {% if item.done %}✓{% endif %}
+    </span>
+    <span class="{{ 'line-through text-gray-400' if item.done else 'text-gray-700' }}">
+      {{ item.text }}
+    </span>
+    {% if item.dueDate and not item.done %}
+    <span class="text-xs text-orange-500 ml-auto">{{ item.dueDate }}</span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if card.content["items"] | length == 0 %}
+<p class="text-gray-400 text-center py-4">暂无待办事项</p>
+{% endif %}

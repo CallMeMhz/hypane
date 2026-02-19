@@ -1,0 +1,21 @@
+<!-- Reminder Card Content -->
+<div class="flex items-center gap-3">
+  <span class="text-2xl">{{ card.content.emoji | default('📅') }}</span>
+  <div>
+    <div class="font-medium text-gray-800">{{ card.content.title }}</div>
+    {% if card.content.date %}
+    <div class="text-sm text-gray-500">{{ card.content.date }}</div>
+    {% endif %}
+    {% if card.content.daysLeft is defined %}
+    <div class="text-sm {{ 'text-red-500' if card.content.daysLeft <= 3 else 'text-orange-500' if card.content.daysLeft <= 7 else 'text-gray-400' }}">
+      {% if card.content.daysLeft == 0 %}
+        就是今天！
+      {% elif card.content.daysLeft < 0 %}
+        已过去 {{ -card.content.daysLeft }} 天
+      {% else %}
+        还有 {{ card.content.daysLeft }} 天
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>

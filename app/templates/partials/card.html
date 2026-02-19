@@ -1,0 +1,46 @@
+<!-- Card Partial - renders a single card based on type -->
+<div 
+  id="card-{{ card.id }}"
+  class="card card-{{ card.size or 'medium' }}"
+  hx-get="/cards/{{ card.id }}"
+  hx-trigger="refresh-{{ card.id }} from:body"
+  hx-swap="outerHTML"
+>
+  <!-- Card Header -->
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="font-semibold text-gray-800">{{ card.title }}</h3>
+    {% if card.updatedAt %}
+    <span class="text-xs text-gray-400">
+      {{ card.updatedAt[:10] }}
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- Card Content by Type -->
+  {% if card.type == 'weather' %}
+    {% include "components/weather.html" %}
+  {% elif card.type == 'todo' %}
+    {% include "components/todo.html" %}
+  {% elif card.type == 'news-single' %}
+    {% include "components/news.html" %}
+  {% elif card.type == 'news-bundle' %}
+    {% include "components/news_bundle.html" %}
+  {% elif card.type == 'crypto' %}
+    {% include "components/crypto.html" %}
+  {% elif card.type == 'crypto-bundle' %}
+    {% include "components/crypto_bundle.html" %}
+  {% elif card.type == 'reminder' %}
+    {% include "components/reminder.html" %}
+  {% else %}
+    <!-- Custom content: check for HTML or render as JSON -->
+    {% if card.content.html %}
+      <div class="custom-html-content">
+        {{ card.content.html | safe }}
+      </div>
+    {% else %}
+      <div class="text-gray-600">
+        <pre class="text-sm whitespace-pre-wrap">{{ card.content | tojson(indent=2) }}</pre>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
