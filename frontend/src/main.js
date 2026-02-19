@@ -5,9 +5,6 @@ import './styles/main.css'
 import htmx from 'htmx.org'
 window.htmx = htmx
 
-// Sortable for drag-and-drop
-import Sortable from 'sortablejs'
-
 // Markdown
 import { marked } from 'marked'
 
@@ -27,63 +24,77 @@ window.renderMarkdown = function(text) {
   return marked.parse(text)
 }
 
-// Grid layout - sortable drag-and-drop
-let sortableInstance = null
+// Grid constants
+const GRID_SIZE = 80
 
-function initGrid() {
-  const grid = document.getElementById('dashboard-cards')
-  if (!grid) return
-  
-  initSortable(grid)
-}
-
-function initSortable(grid) {
-  if (sortableInstance) {
-    sortableInstance.destroy()
-  }
-  
-  sortableInstance = new Sortable(grid, {
-    animation: 150,
-    ghostClass: 'sortable-ghost',
-    chosenClass: 'sortable-chosen',
-    dragClass: 'sortable-drag',
-    handle: '.card-drag-handle',
-    draggable: '.card',
+// Free-position card dragging
+function initCardDrag() {
+  document.addEventListener('mousedown', (e) => {
+    const handle = e.target.closest('.card-drag-handle')
+    if (!handle) return
     
-    onEnd: async function(evt) {
-      // Get new order of card IDs
-      const cards = grid.querySelectorAll('.card')
-      const cardIds = Array.from(cards).map(el => {
-        const id = el.id.replace('card-', '')
-        return id
-      }).filter(id => id) // Filter out empty
+    const card = handle.closest('.card')
+    if (!card) return
+    
+    e.preventDefault()
+    const cardId = card.id.replace('card-', '')
+    const grid = card.parentElement
+    const gridRect = grid.getBoundingClientRect()
+    
+    const startX = e.clientX
+    const startY = e.clientY
+    const startLeft = parseInt(card.style.left) || 0
+    const startTop = parseInt(card.style.top) || 0
+    
+    card.style.zIndex = '100'
+    card.style.transition = 'none'
+    
+    const onMouseMove = (e) => {
+      const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
       
-      // Save new order to backend
+      // Snap to grid
+      let newX = Math.round((startLeft + deltaX) / GRID_SIZE) * GRID_SIZE
+      let newY = Math.round((startTop + deltaY) / GRID_SIZE) * GRID_SIZE
+      
+      // Keep within bounds
+      newX = Math.max(0, newX)
+      newY = Math.max(0, newY)
+      
+      card.style.left = newX + 'px'
+      card.style.top = newY + 'px'
+      card.dataset.gridX = newX / GRID_SIZE
+      card.dataset.gridY = newY / GRID_SIZE
+    }
+    
+    const onMouseUp = async () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      
+      card.style.zIndex = ''
+      card.style.transition = ''
+      
+      // Save position to backend
+      const x = parseInt(card.dataset.gridX) || 0
+      const y = parseInt(card.dataset.gridY) || 0
+      
       try {
-        await fetch('/api/cards/reorder', {
-          method: 'POST',
+        await fetch(`/api/cards/${cardId}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cardIds })
+          body: JSON.stringify({ position: { x, y } })
         })
       } catch (e) {
-        console.error('Failed to save card order:', e)
+        console.error('Failed to save card position:', e)
       }
     }
+    
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
   })
 }
 
-// Refresh grid (re-init sortable after HTMX swap)
-function refreshGrid() {
-  const grid = document.getElementById('dashboard-cards')
-  if (grid) {
-    initSortable(grid)
-  }
-}
-
-// Card resize functionality - uses WxH grid format (e.g., "3x2")
-const ROW_HEIGHT = 80 + 16 // grid-auto-rows + gap
-const COL_COUNT = 12
-
+// Card resize functionality
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
     const handle = e.target.closest('.card-resize-handle')
@@ -94,13 +105,10 @@ function initCardResize() {
     const card = document.getElementById('card-' + cardId)
     if (!card) return
     
-    const grid = card.parentElement
     const startX = e.clientX
     const startY = e.clientY
-    const gridWidth = grid.offsetWidth
-    const colWidth = gridWidth / COL_COUNT
     
-    // Get current grid size from data attribute or classes
+    // Get current grid size
     let currentW = 3, currentH = 2
     const sizeAttr = card.dataset.gridSize
     if (sizeAttr && sizeAttr.includes('x')) {
@@ -112,11 +120,9 @@ function initCardResize() {
     const startW = currentW
     const startH = currentH
     
-    // Remove transition during drag
     card.style.transition = 'none'
     
-    const updateCardClass = (w, h) => {
-      // Remove old w/h classes
+    const updateCardSize = (w, h) => {
       card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').replace(/\bcard-(small|medium|large|full)\b/g, '').trim()
       card.classList.add('card', `w${w}`, `h${h}`)
       card.dataset.gridSize = `${w}x${h}`
@@ -126,19 +132,16 @@ function initCardResize() {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      // Calculate new grid units
-      let newW = Math.round(startW + deltaX / colWidth)
-      let newH = Math.round(startH + deltaY / ROW_HEIGHT)
+      let newW = Math.round(startW + deltaX / GRID_SIZE)
+      let newH = Math.round(startH + deltaY / GRID_SIZE)
       
-      // Clamp values
       newW = Math.max(1, Math.min(12, newW))
-      newH = Math.max(1, Math.min(6, newH))
+      newH = Math.max(1, Math.min(8, newH))
       
-      // Update if changed
       if (newW !== currentW || newH !== currentH) {
         currentW = newW
         currentH = newH
-        updateCardClass(currentW, currentH)
+        updateCardSize(currentW, currentH)
       }
     }
     
@@ -148,7 +151,6 @@ function initCardResize() {
       
       card.style.transition = ''
       
-      // Save new size to backend
       const newSize = `${currentW}x${currentH}`
       try {
         await fetch(`/api/cards/${cardId}`, {
@@ -168,15 +170,8 @@ function initCardResize() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(initGrid, 100)
+  initCardDrag()
   initCardResize()
-})
-
-// Refresh after HTMX swaps
-document.body.addEventListener('htmx:afterSwap', (e) => {
-  if (e.target.id === 'dashboard-cards') {
-    setTimeout(refreshGrid, 50)
-  }
 })
 
 // Generate a simple session ID

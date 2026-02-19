@@ -25,9 +25,9 @@ class CreateCardRequest(BaseModel):
 class UpdateCardRequest(BaseModel):
     title: Optional[str] = None
     content: Optional[Any] = None
-    size: Optional[str] = None  # Grid size like "3x2" or legacy "medium"
+    size: Optional[str] = None  # Grid size like "3x2"
+    position: Optional[dict] = None  # {x: col, y: row} grid position
     type: Optional[str] = None
-    position: Optional[int] = None  # For reordering
     titleColor: Optional[str] = None
     titleClass: Optional[str] = None
 
@@ -134,7 +134,7 @@ async def update_card(card_id: str, request: UpdateCardRequest):
             if request.type is not None:
                 card["type"] = request.type
             if request.position is not None:
-                card["position"] = {"order": request.position}
+                card["position"] = request.position  # {x, y} grid coordinates
             if request.titleColor is not None:
                 card["titleColor"] = request.titleColor
             if request.titleClass is not None:
@@ -142,9 +142,6 @@ async def update_card(card_id: str, request: UpdateCardRequest):
             
             card["updatedAt"] = now.isoformat().replace("+00:00", "Z")
             dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
-            
-            # Re-sort cards by position
-            dashboard["cards"].sort(key=lambda c: c.get("position", {}).get("order", 999))
             
             save_dashboard(dashboard)
             

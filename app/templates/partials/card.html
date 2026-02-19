@@ -8,10 +8,16 @@
   {# Legacy size format #}
   {% set size_class = 'card-' ~ grid_size %}
 {% endif %}
+{% set pos = card.position or {} %}
+{% set pos_x = pos.x if pos.x is defined else 0 %}
+{% set pos_y = pos.y if pos.y is defined else 0 %}
 <div 
   id="card-{{ card.id }}"
   class="card {{ size_class }}"
+  style="left: {{ pos_x * 80 }}px; top: {{ pos_y * 80 }}px;"
   data-grid-size="{{ grid_size }}"
+  data-grid-x="{{ pos_x }}"
+  data-grid-y="{{ pos_y }}"
   hx-get="/cards/{{ card.id }}"
   hx-trigger="refresh-{{ card.id }} from:body"
   hx-swap="outerHTML"
