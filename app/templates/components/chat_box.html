@@ -135,14 +135,21 @@
           ></div>
         </div>
         
-        <!-- Send button -->
+        <!-- Send/Stop button -->
         <button 
+          x-show="!loading"
           @click="send"
           class="btn btn-primary flex-shrink-0 h-9 px-3 text-sm"
-          :disabled="loading"
-          :class="{ 'opacity-50 cursor-not-allowed': loading }"
         >
           Send
+        </button>
+        <button 
+          x-show="loading"
+          @click="stop"
+          class="btn flex-shrink-0 h-9 px-3 text-sm"
+          style="background: var(--kb-red-dim); border: 1px solid var(--kb-red); color: var(--kb-white-text-1);"
+        >
+          Stop
         </button>
       </div>
     </div>

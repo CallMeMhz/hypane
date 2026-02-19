@@ -111,6 +111,7 @@ Alpine.data('chatBox', () => ({
   currentMessageIndex: -1,
   cardRefs: [], // [{id, title, html}, ...]
   sessionId: generateSessionId(), // Unique session for this browser tab
+  abortController: null, // For stopping requests
 
   toggle() {
     this.open = !this.open
@@ -146,6 +147,22 @@ Alpine.data('chatBox', () => ({
     return window.renderMarkdown(text)
   },
 
+  stop() {
+    if (this.abortController) {
+      this.abortController.abort()
+      this.abortController = null
+    }
+    this.loading = false
+    // Add a note that generation was stopped
+    if (this.currentMessageIndex >= 0 && this.messages[this.currentMessageIndex]) {
+      const msg = this.messages[this.currentMessageIndex]
+      if (msg.content) {
+        msg.content += '\n\n*(stopped)*'
+      }
+    }
+    this.currentMessageIndex = -1
+  },
+
   async send() {
     const text = this.getInputText()
     if ((!text && this.cardRefs.length === 0) || this.loading) return
@@ -178,6 +195,9 @@ Alpine.data('chatBox', () => ({
     this.cardRefs = []
     this.loading = true
     this.currentMessageIndex = -1
+    
+    // Create abort controller for this request
+    this.abortController = new AbortController()
 
     try {
       // POST request with JSON body
@@ -187,7 +207,8 @@ Alpine.data('chatBox', () => ({
         body: JSON.stringify({
           message: userMessage,
           session_id: this.sessionId
-        })
+        }),
+        signal: this.abortController.signal
       })
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -216,10 +237,16 @@ Alpine.data('chatBox', () => ({
         }
       }
     } catch (error) {
-      console.error('Chat error:', error)
-      this.messages.push({ role: 'assistant', content: '抱歉，连接出错了。' })
+      if (error.name === 'AbortError') {
+        // User stopped the request - already handled in stop()
+        console.log('Request aborted by user')
+      } else {
+        console.error('Chat error:', error)
+        this.messages.push({ role: 'assistant', content: '抱歉，连接出错了。' })
+      }
     } finally {
       this.loading = false
+      this.abortController = null
       this.scrollToBottom()
     }
   },
