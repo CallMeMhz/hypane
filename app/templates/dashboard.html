@@ -31,10 +31,12 @@
        class="dashboard-grid"
        hx-get="/dashboard-cards" 
        hx-trigger="refresh from:body">
+    <!-- Sizer element for masonry -->
+    <div class="card-sizer"></div>
     {% for card in cards %}
       {% include "partials/card.html" %}
     {% else %}
-      <div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+      <div class="w-full text-center text-gray-500 dark:text-gray-400 py-16">
         <p class="text-sm">No cards yet</p>
         <p class="text-xs mt-2 text-gray-400 dark:text-gray-500">Chat with the assistant to get started</p>
       </div>

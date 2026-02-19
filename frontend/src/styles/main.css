@@ -18,19 +18,20 @@
     @apply bg-white dark:bg-gray-800/50 
            border border-gray-200 dark:border-gray-800 
            rounded-lg p-4 transition-all 
-           hover:border-gray-300 dark:hover:border-gray-700;
+           hover:border-gray-300 dark:hover:border-gray-700
+           float-left mb-4;
   }
   
   .card-small {
-    @apply col-span-1;
+    /* Uses default width from media queries */
   }
   
   .card-medium {
-    @apply col-span-1 md:col-span-2;
+    /* Uses medium width from media queries */
   }
   
   .card-large {
-    @apply col-span-1 md:col-span-2 lg:col-span-3;
+    /* Uses large width from media queries */
   }
   
   /* Custom HTML content - dark mode defaults */
@@ -82,12 +83,57 @@
   }
 }
 
-/* Masonry-like grid */
+/* Masonry grid */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
-  align-items: start;
+  width: 100%;
+}
+
+.dashboard-grid::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* Sizer element for masonry column width */
+.card-sizer,
+.dashboard-grid .card {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .card-sizer,
+  .dashboard-grid .card {
+    width: calc(50% - 8px);
+  }
+  .dashboard-grid .card-large {
+    width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-sizer,
+  .dashboard-grid .card {
+    width: calc(33.333% - 11px);
+  }
+  .dashboard-grid .card-medium {
+    width: calc(50% - 8px);
+  }
+  .dashboard-grid .card-large {
+    width: calc(66.666% - 5px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .card-sizer,
+  .dashboard-grid .card {
+    width: calc(25% - 12px);
+  }
+  .dashboard-grid .card-medium {
+    width: calc(50% - 8px);
+  }
+  .dashboard-grid .card-large {
+    width: calc(75% - 4px);
+  }
 }
 
 /* Chat box animation */

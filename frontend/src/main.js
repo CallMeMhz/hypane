@@ -5,6 +5,9 @@ import './styles/main.css'
 import htmx from 'htmx.org'
 window.htmx = htmx
 
+// Masonry layout
+import Masonry from 'masonry-layout'
+
 // Markdown
 import { marked } from 'marked'
 
@@ -23,6 +26,50 @@ window.renderMarkdown = function(text) {
   if (!text) return ''
   return marked.parse(text)
 }
+
+// Initialize or refresh masonry layout
+let masonryInstance = null
+
+function initMasonry() {
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return
+  
+  if (masonryInstance) {
+    masonryInstance.destroy()
+  }
+  
+  masonryInstance = new Masonry(grid, {
+    itemSelector: '.card',
+    columnWidth: '.card-sizer',
+    gutter: 16,
+    percentPosition: true,
+    transitionDuration: '0.2s'
+  })
+}
+
+// Refresh masonry after content changes
+function refreshMasonry() {
+  if (masonryInstance) {
+    masonryInstance.reloadItems()
+    masonryInstance.layout()
+  } else {
+    initMasonry()
+  }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(initMasonry, 100)
+})
+
+// Refresh after HTMX swaps
+document.body.addEventListener('htmx:afterSwap', (e) => {
+  if (e.target.id === 'dashboard-cards') {
+    setTimeout(refreshMasonry, 50)
+  }
+})
+
+window.refreshMasonry = refreshMasonry
 
 // Generate a simple session ID
 function generateSessionId() {

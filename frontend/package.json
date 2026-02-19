@@ -17,6 +17,7 @@
     "alpinejs": "^3.14.0",
     "htmx.org": "^2.0.0",
     "lucide": "^0.574.0",
-    "marked": "^17.0.3"
+    "marked": "^17.0.3",
+    "masonry-layout": "^4.2.2"
   }
 }
