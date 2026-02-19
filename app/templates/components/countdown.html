@@ -1,0 +1,38 @@
+<!-- Countdown Card Content -->
+{% set target = card.content.targetDate %}
+{% set emoji = card.content.emoji or '📅' %}
+{% set label = card.content.label or card.title %}
+
+<div class="text-center py-4" 
+     x-data="countdown('{{ target }}')" 
+     x-init="startCountdown()">
+  <div class="text-4xl mb-3">{{ emoji }}</div>
+  <div class="text-5xl font-medium text-gray-800 dark:text-gray-100 mb-1" x-text="days"></div>
+  <div class="text-sm text-gray-500 dark:text-gray-400">days until</div>
+  <div class="text-lg text-gray-600 dark:text-gray-300 mt-2">{{ label }}</div>
+  <div class="text-xs text-gray-400 dark:text-gray-500 mt-3">{{ target }}</div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  if (!Alpine.data.countdown) {
+    Alpine.data('countdown', (targetDate) => ({
+      days: 0,
+      targetDate: targetDate,
+      
+      startCountdown() {
+        this.updateDays();
+        // Update every hour
+        setInterval(() => this.updateDays(), 3600000);
+      },
+      
+      updateDays() {
+        const target = new Date(this.targetDate + 'T00:00:00');
+        const now = new Date();
+        const diff = target - now;
+        this.days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      }
+    }));
+  }
+});
+</script>

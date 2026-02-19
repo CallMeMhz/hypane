@@ -51,6 +51,8 @@
     {% include "components/crypto_bundle.html" %}
   {% elif card.type == 'reminder' %}
     {% include "components/reminder.html" %}
+  {% elif card.type == 'countdown' %}
+    {% include "components/countdown.html" %}
   {% else %}
     <!-- Custom content: check for HTML or render as JSON -->
     {% if card.content.html %}

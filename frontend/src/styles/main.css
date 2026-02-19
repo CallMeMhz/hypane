@@ -33,6 +33,11 @@
     @apply col-span-1 md:col-span-2 lg:col-span-3;
   }
   
+  /* Custom HTML content - dark mode defaults */
+  .custom-html-content {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+  
   /* Buttons */
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer;
