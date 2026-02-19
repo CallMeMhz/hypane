@@ -2,6 +2,7 @@
 <div 
   id="card-{{ card.id }}"
   class="card card-{{ card.size or 'medium' }}"
+  {% if card.height %}style="min-height: {{ card.height }};"{% endif %}
   hx-get="/cards/{{ card.id }}"
   hx-trigger="refresh-{{ card.id }} from:body"
   hx-swap="outerHTML"

@@ -26,6 +26,7 @@ class UpdateCardRequest(BaseModel):
     title: Optional[str] = None
     content: Optional[Any] = None
     size: Optional[str] = None
+    height: Optional[str] = None  # Custom height (e.g., "200px")
     type: Optional[str] = None
     position: Optional[int] = None  # For reordering
     titleColor: Optional[str] = None
@@ -131,6 +132,8 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                     card["content"] = request.content
             if request.size is not None:
                 card["size"] = request.size
+            if request.height is not None:
+                card["height"] = request.height
             if request.type is not None:
                 card["type"] = request.type
             if request.position is not None:

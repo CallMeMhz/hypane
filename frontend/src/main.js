@@ -131,7 +131,9 @@ function initCardResize() {
     if (!card) return
     
     const startX = e.clientX
+    const startY = e.clientY
     const startWidth = card.offsetWidth
+    const startHeight = card.offsetHeight
     const gridWidth = card.parentElement.offsetWidth
     
     // Get current size
@@ -143,9 +145,15 @@ function initCardResize() {
       }
     }
     
+    // Store original min-height and set temporary styles
+    const originalMinHeight = card.style.minHeight
+    card.style.transition = 'none'
+    
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
+      const deltaY = e.clientY - startY
       const newWidth = startWidth + deltaX
+      const newHeight = startHeight + deltaY
       const widthPercent = newWidth / gridWidth
       
       // Determine new size based on width percentage
@@ -158,16 +166,20 @@ function initCardResize() {
         newSize = 'medium'
       }
       
-      // Update visual feedback
+      // Update width class if changed
       if (newSize !== currentSize) {
         card.classList.remove('card-small', 'card-medium', 'card-large', 'card-full')
         card.classList.add('card-' + newSize)
         currentSize = newSize
-        
-        // Re-layout masonry
-        if (masonryInstance) {
-          masonryInstance.layout()
-        }
+      }
+      
+      // Update height directly (with minimum)
+      const minHeight = 80
+      card.style.minHeight = Math.max(minHeight, newHeight) + 'px'
+      
+      // Re-layout masonry
+      if (masonryInstance) {
+        masonryInstance.layout()
       }
     }
     
@@ -175,12 +187,20 @@ function initCardResize() {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       
-      // Save new size to backend
+      // Get final height
+      const finalHeight = card.style.minHeight
+      card.style.transition = ''
+      
+      // Save new size and height to backend
       try {
+        const updates = { size: currentSize }
+        if (finalHeight) {
+          updates.height = finalHeight
+        }
         await fetch(`/api/cards/${cardId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ size: currentSize })
+          body: JSON.stringify(updates)
         })
       } catch (e) {
         console.error('Failed to save card size:', e)
