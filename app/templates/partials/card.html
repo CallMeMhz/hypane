@@ -61,8 +61,26 @@
   {% else %}
     <!-- Custom content: check for HTML or render as JSON -->
     {% if card.content.html %}
-      <div class="custom-html-content">
+      <div class="custom-html-content" data-card-id="{{ card.id }}">
         {{ card.content.html | safe }}
+        <script>
+          // Inject card API helper for custom HTML cards
+          (function() {
+            const cardId = '{{ card.id }}';
+            const container = document.querySelector('[data-card-id="{{ card.id }}"]');
+            if (container) {
+              container.cardAction = async function(action, payload) {
+                const res = await fetch(`/api/cards/${cardId}/action`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action, payload })
+                });
+                return res.json();
+              };
+              container.cardId = cardId;
+            }
+          })();
+        </script>
       </div>
     {% else %}
       <div class="text-gray-500 dark:text-gray-400 text-sm">

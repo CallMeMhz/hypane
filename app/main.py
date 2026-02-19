@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import STATIC_DIR, TEMPLATES_DIR
-from app.routes import dashboard, cards, chat, api_cards, history, tasks
+from app.routes import dashboard, cards, chat, api_cards, card_actions, history, tasks
 
 app = FastAPI(title="AI Dashboard")
 
@@ -18,5 +18,6 @@ app.include_router(dashboard.router)
 app.include_router(cards.router)
 app.include_router(chat.router)
 app.include_router(api_cards.router)
+app.include_router(card_actions.router)
 app.include_router(history.router)
 app.include_router(tasks.router)
