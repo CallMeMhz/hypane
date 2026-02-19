@@ -135,8 +135,9 @@ function initCardResize() {
       let newW = Math.round(startW + deltaX / GRID_SIZE)
       let newH = Math.round(startH + deltaY / GRID_SIZE)
       
-      newW = Math.max(1, Math.min(12, newW))
-      newH = Math.max(1, Math.min(8, newH))
+      // Minimum 2x2, maximum 12x8
+      newW = Math.max(2, Math.min(12, newW))
+      newH = Math.max(2, Math.min(8, newH))
       
       if (newW !== currentW || newH !== currentH) {
         currentW = newW
