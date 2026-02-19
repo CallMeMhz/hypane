@@ -59,8 +59,8 @@ async def get_card(card_id: str):
     raise HTTPException(status_code=404, detail="Card not found")
 
 
-# Minimum sizes per card type
-MIN_SIZES = {
+# Default minimum sizes per card type
+DEFAULT_MIN_SIZES = {
     'weather': (3, 2),
     'todo': (2, 2),
     'news-single': (3, 2),
@@ -70,12 +70,20 @@ MIN_SIZES = {
     'reminder': (2, 2),
     'countdown': (2, 2),
     'chat': (4, 3),
-    'cookie-clicker': (3, 4),
 }
 
-def enforce_min_size(card_type: str, size: str) -> str:
-    """Ensure size meets minimum for card type."""
-    min_w, min_h = MIN_SIZES.get(card_type, (2, 2))
+def enforce_min_size(card_type: str, size: str, content: dict = None) -> str:
+    """Ensure size meets minimum for card type. Card can override via content.minSize."""
+    # Check card's own minSize first
+    if content and isinstance(content, dict) and content.get('minSize'):
+        min_size_str = content['minSize']
+        if 'x' in min_size_str:
+            parts = min_size_str.split('x')
+            min_w, min_h = int(parts[0]), int(parts[1])
+        else:
+            min_w, min_h = 2, 2
+    else:
+        min_w, min_h = DEFAULT_MIN_SIZES.get(card_type, (2, 2))
     
     if 'x' in size:
         parts = size.split('x')
@@ -100,9 +108,6 @@ async def create_card(request: CreateCardRequest):
     timestamp = now.strftime("%Y%m%d%H%M%S")
     card_id = f"{request.type}-{timestamp}-{uuid.uuid4().hex[:4]}"
     
-    # Enforce minimum size for card type
-    size = enforce_min_size(request.type, request.size)
-    
     # Normalize content - parse JSON string if needed
     content = request.content
     if isinstance(content, str):
@@ -110,6 +115,9 @@ async def create_card(request: CreateCardRequest):
             content = json.loads(content)
         except json.JSONDecodeError:
             pass
+    
+    # Enforce minimum size for card type (content may have minSize)
+    size = enforce_min_size(request.type, request.size, content)
     
     # Position: use provided or find next available spot
     position = request.position
@@ -180,7 +188,7 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                 else:
                     card["content"] = request.content
             if request.size is not None:
-                card["size"] = enforce_min_size(card.get("type", ""), request.size)
+                card["size"] = enforce_min_size(card.get("type", ""), request.size, card.get("content"))
             if request.type is not None:
                 card["type"] = request.type
             if request.position is not None:

@@ -11,8 +11,8 @@
 {% set pos = card.position or {} %}
 {% set pos_x = pos.x if pos.x is defined else 0 %}
 {% set pos_y = pos.y if pos.y is defined else 0 %}
-{# Minimum sizes per card type (WxH) #}
-{% set min_sizes = {
+{# Minimum sizes per card type - card can override via content.minSize #}
+{% set default_min_sizes = {
   'weather': '3x2',
   'todo': '2x2',
   'news-single': '3x2',
@@ -21,10 +21,9 @@
   'crypto-bundle': '3x3',
   'reminder': '2x2',
   'countdown': '2x2',
-  'chat': '4x3',
-  'cookie-clicker': '3x4'
+  'chat': '4x3'
 } %}
-{% set min_size = min_sizes[card.type] if card.type in min_sizes else '2x2' %}
+{% set min_size = card.content.minSize if card.content is mapping and card.content.minSize else (default_min_sizes[card.type] if card.type in default_min_sizes else '2x2') %}
 <div 
   id="card-{{ card.id }}"
   class="card {{ size_class }}"
