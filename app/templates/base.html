@@ -1,13 +1,19 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}AI Dashboard{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/main.css">
   <script src="/static/js/main.js" defer></script>
+  <script>
+    // Check for saved theme preference or default to dark
+    if (localStorage.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors">
   {% block content %}{% endblock %}
 </body>
 </html>

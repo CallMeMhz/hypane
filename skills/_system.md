@@ -48,6 +48,24 @@ Use Tailwind CSS classes for styling. You can include:
 { "items": [{ "symbol": "BTC", "name": "Bitcoin", "price": "97000", "change": 2.5 }] }
 ```
 
+## Title Styling
+
+Cards can have colored titles using:
+- `titleColor`: CSS color value (e.g. "#ff6b6b", "rgb(255,0,0)")  
+- `titleClass`: Tailwind classes (e.g. "text-pink-500" or gradient text)
+
+Example gradient title:
+```
+titleClass: "bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent"
+```
+
+## Dark Mode
+
+The dashboard uses dark mode by default. Design your HTML content to look good on dark backgrounds:
+- Use `dark:` prefix for dark mode specific styles
+- Prefer lighter text colors on dark backgrounds
+- Consider using `bg-gray-800` or similar for nested containers
+
 ## Creative Examples
 
 **Disco Ball:**

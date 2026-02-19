@@ -8,9 +8,15 @@
 >
   <!-- Card Header -->
   <div class="flex items-center justify-between mb-3">
-    <h3 class="font-semibold text-gray-800">{{ card.title }}</h3>
+    {% if card.titleColor %}
+      <h3 class="font-semibold" style="color: {{ card.titleColor }}">{{ card.title }}</h3>
+    {% elif card.titleClass %}
+      <h3 class="font-semibold {{ card.titleClass }}">{{ card.title }}</h3>
+    {% else %}
+      <h3 class="font-semibold text-gray-800 dark:text-gray-100">{{ card.title }}</h3>
+    {% endif %}
     {% if card.updatedAt %}
-    <span class="text-xs text-gray-400">
+    <span class="text-xs text-gray-400 dark:text-gray-500">
       {{ card.updatedAt[:10] }}
     </span>
     {% endif %}
@@ -38,7 +44,7 @@
         {{ card.content.html | safe }}
       </div>
     {% else %}
-      <div class="text-gray-600">
+      <div class="text-gray-600 dark:text-gray-300">
         <pre class="text-sm whitespace-pre-wrap">{{ card.content | tojson(indent=2) }}</pre>
       </div>
     {% endif %}

@@ -74,16 +74,18 @@ export default function (pi: any) {
     label: "Create Dashboard Card",
     description: `Create a new card on the dashboard.
 You can use any type name. Common types include: weather, todo, news-bundle, crypto, crypto-bundle, reminder.
-You can also create new types - the frontend will render unknown types as JSON.
-Content structure is flexible and depends on the type.`,
+You can also create new types - use content.html for custom HTML rendering.
+Title can have custom colors via titleColor (CSS color) or titleClass (Tailwind classes).`,
     parameters: Type.Object({
       type: Type.String({ description: "Card type (e.g. weather, todo, crypto, or any custom type)" }),
       title: Type.String({ description: "Card title" }),
-      content: Type.Any({ description: "Card content (structure is flexible)" }),
+      content: Type.Any({ description: "Card content. Use {html: '...'} for custom HTML rendering" }),
       size: Type.Optional(Type.String({ description: "Card size: small, medium, or large" })),
+      titleColor: Type.Optional(Type.String({ description: "Title color as CSS value (e.g. '#ff6b6b', 'rgb(255,0,0)')" })),
+      titleClass: Type.Optional(Type.String({ description: "Title CSS classes (e.g. 'text-pink-500', 'bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent')" })),
     }),
 
-    async execute(_toolCallId: string, params: { type: string; title: string; content: any; size?: string }) {
+    async execute(_toolCallId: string, params: { type: string; title: string; content: any; size?: string; titleColor?: string; titleClass?: string }) {
       try {
         const response = await fetch(`${DASHBOARD_API}/api/cards`, {
           method: "POST",
@@ -93,6 +95,8 @@ Content structure is flexible and depends on the type.`,
             title: params.title,
             content: params.content,
             size: params.size || "medium",
+            titleColor: params.titleColor,
+            titleClass: params.titleClass,
           }),
         });
         

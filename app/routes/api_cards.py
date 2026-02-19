@@ -17,6 +17,8 @@ class CreateCardRequest(BaseModel):
     title: str
     content: Any
     size: str = "medium"
+    titleColor: Optional[str] = None
+    titleClass: Optional[str] = None
 
 
 class UpdateCardRequest(BaseModel):
@@ -24,6 +26,8 @@ class UpdateCardRequest(BaseModel):
     content: Optional[Any] = None
     size: Optional[str] = None
     type: Optional[str] = None
+    titleColor: Optional[str] = None
+    titleClass: Optional[str] = None
 
 
 class MergeCardsRequest(BaseModel):
@@ -80,6 +84,12 @@ async def create_card(request: CreateCardRequest):
         "updatedAt": now.isoformat().replace("+00:00", "Z"),
     }
     
+    # Optional title styling
+    if request.titleColor:
+        new_card["titleColor"] = request.titleColor
+    if request.titleClass:
+        new_card["titleClass"] = request.titleClass
+    
     dashboard.setdefault("cards", []).append(new_card)
     dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")
     save_dashboard(dashboard)
@@ -108,6 +118,10 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                 card["size"] = request.size
             if request.type is not None:
                 card["type"] = request.type
+            if request.titleColor is not None:
+                card["titleColor"] = request.titleColor
+            if request.titleClass is not None:
+                card["titleClass"] = request.titleClass
             
             card["updatedAt"] = now.isoformat().replace("+00:00", "Z")
             dashboard["updatedAt"] = now.isoformat().replace("+00:00", "Z")

@@ -7,10 +7,13 @@
  */
 @source "../../../app/templates/**/*.html";
 
+/* Enable dark mode via class */
+@variant dark (&:where(.dark, .dark *));
+
 /* Custom styles */
 @layer components {
   .card {
-    @apply bg-white rounded-lg shadow-md p-4 transition-shadow hover:shadow-lg;
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 transition-all hover:shadow-lg;
   }
   
   .card-small {
@@ -34,7 +37,14 @@
   }
   
   .chat-input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent;
+    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+           focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent;
+  }
+
+  /* Card title with optional color support */
+  .card-title {
+    @apply font-semibold text-gray-800 dark:text-gray-100;
   }
 }
 
@@ -60,4 +70,25 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* Dark mode text defaults */
+.dark .text-gray-600 {
+  @apply text-gray-300;
+}
+
+.dark .text-gray-400 {
+  @apply text-gray-500;
+}
+
+.dark .text-gray-800 {
+  @apply text-gray-100;
+}
+
+.dark .border-gray-100 {
+  @apply border-gray-700;
+}
+
+.dark .border-gray-200 {
+  @apply border-gray-700;
 }
