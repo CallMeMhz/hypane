@@ -112,7 +112,7 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
     
     # Build full panel list with data
     panels = []
-    for panel_layout in layout.get("panels", []):
+    for idx, panel_layout in enumerate(layout.get("panels", [])):
         panel_id = panel_layout.get("id")
         panel_data = get_panel_data(panel_id)
         
@@ -121,7 +121,11 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
                 **panel_data,
                 "position": panel_layout.get("position", {"x": 0, "y": 0}),
                 "size": panel_layout.get("size", "3x2"),
+                "order": panel_layout.get("order", idx),  # Include order
             })
+    
+    # Sort by order
+    panels.sort(key=lambda p: p.get("order", 0))
     
     return {
         "version": 2,

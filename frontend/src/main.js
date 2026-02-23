@@ -54,19 +54,18 @@ window.renderMarkdown = function(text) {
 }
 
 // ============================================
-// Microsoft-style Tile Grid System
+// Responsive Tile Grid System
 // ============================================
 
-const CELL_SIZE = 70  // Fixed cell size (no scaling)
-const GRID_GAP = 8    // Microsoft uses 8px gap
-const GRID_COLS = 12  // Fixed 12 columns
+const CELL_SIZE = 70    // Fixed cell size
+const GRID_GAP = 8      // Gap between cells
+const MIN_COLS = 12     // Minimum columns
 const MOBILE_BREAKPOINT = 768
 
 // Grid state
 let gridState = {
-  cellSize: CELL_SIZE,
-  cols: GRID_COLS,
-  cards: [],  // [{id, x, y, w, h, el}, ...]
+  cols: MIN_COLS,       // Current column count (dynamic)
+  panels: [],           // [{id, order, w, h, el, x, y}, ...]
 }
 
 // Check if mobile mode
@@ -74,157 +73,154 @@ function isMobile() {
   return window.innerWidth < MOBILE_BREAKPOINT
 }
 
+// Calculate available columns based on container width
+function calculateCols() {
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return MIN_COLS
+  
+  const containerWidth = grid.parentElement.clientWidth - 16 // padding
+  const cols = Math.floor((containerWidth + GRID_GAP) / (CELL_SIZE + GRID_GAP))
+  return Math.max(MIN_COLS, cols)
+}
+
 // Build grid state from DOM
 function buildGridState() {
   const grid = document.getElementById('dashboard-cards')
   if (!grid) return
   
-  gridState.cols = GRID_COLS
-  gridState.cards = []
-  const cards = grid.querySelectorAll('.card')
+  gridState.cols = calculateCols()
+  gridState.panels = []
   
-  cards.forEach(card => {
-    const x = parseInt(card.dataset.gridX) || 0
-    const y = parseInt(card.dataset.gridY) || 0
-    const size = card.dataset.gridSize || '2x2'
+  const panels = grid.querySelectorAll('.card')
+  panels.forEach((panel, index) => {
+    const order = parseInt(panel.dataset.order) || index
+    const size = panel.dataset.gridSize || '2x2'
     const [w, h] = size.split('x').map(Number)
     
-    gridState.cards.push({
-      id: card.id,
-      x, y, w, h,
-      el: card
+    gridState.panels.push({
+      id: panel.id,
+      order: order,
+      w: w,
+      h: h,
+      el: panel,
+      x: 0,
+      y: 0
     })
   })
+  
+  // Sort by order
+  gridState.panels.sort((a, b) => a.order - b.order)
 }
 
-// Check if a position overlaps with any card (except excludeId)
-function checkOverlap(x, y, w, h, excludeId) {
-  for (const card of gridState.cards) {
-    if (card.id === excludeId) continue
-    
-    // Check rectangle overlap
-    if (x < card.x + card.w &&
-        x + w > card.x &&
-        y < card.y + card.h &&
-        y + h > card.y) {
-      return card
-    }
-  }
-  return null
-}
-
-// Find first available position for a card (flow layout)
-function findAvailablePosition(w, h, excludeId) {
-  const cols = gridState.cols || 12
-  for (let y = 0; y < 100; y++) {
-    for (let x = 0; x <= cols - w; x++) {
-      if (!checkOverlap(x, y, w, h, excludeId)) {
-        return { x, y }
-      }
-    }
-  }
-  return { x: 0, y: 0 }
-}
-
-// Compact all cards - reflow to fill gaps (like Windows Start)
-function compactCards(excludeId = null) {
-  const cols = gridState.cols || 12
+// Flow layout: place panels in order, wrapping to next row as needed
+function flowLayout() {
+  const cols = gridState.cols
+  const placed = []  // [{x, y, w, h}, ...]
   
-  // Sort cards by original position (top-left to bottom-right)
-  const cardsToPlace = gridState.cards
-    .filter(c => c.id !== excludeId)
-    .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
-  
-  // Place the excluded card first (if any)
-  const placedCards = []
-  const excludedCard = gridState.cards.find(c => c.id === excludeId)
-  if (excludedCard) {
-    placedCards.push(excludedCard)
-  }
-  
-  // Place each card in the first available position
-  for (const card of cardsToPlace) {
-    let placed = false
-    
+  for (const panel of gridState.panels) {
     // Clamp width to available columns
-    const cardW = Math.min(card.w, cols)
+    const panelW = Math.min(panel.w, cols)
+    const panelH = panel.h
     
-    // Try to find a spot from top-left
-    for (let y = 0; y < 100 && !placed; y++) {
-      for (let x = 0; x <= cols - cardW && !placed; x++) {
-        // Check overlap with already placed cards
-        let overlaps = false
-        for (const placed of placedCards) {
-          if (x < placed.x + placed.w &&
-              x + cardW > placed.x &&
-              y < placed.y + placed.h &&
-              y + card.h > placed.y) {
-            overlaps = true
+    // Find first position where panel fits
+    let bestX = 0, bestY = 0
+    let found = false
+    
+    for (let y = 0; y < 1000 && !found; y++) {
+      for (let x = 0; x <= cols - panelW; x++) {
+        // Check if this position is free
+        let fits = true
+        for (const p of placed) {
+          // Check overlap
+          if (x < p.x + p.w &&
+              x + panelW > p.x &&
+              y < p.y + p.h &&
+              y + panelH > p.y) {
+            fits = false
             break
           }
         }
         
-        if (!overlaps) {
-          card.x = x
-          card.y = y
-          placedCards.push(card)
-          placed = true
+        if (fits) {
+          bestX = x
+          bestY = y
+          found = true
+          break
         }
       }
     }
+    
+    panel.x = bestX
+    panel.y = bestY
+    placed.push({ x: bestX, y: bestY, w: panelW, h: panelH })
   }
-}
-
-// Update grid container height
-function updateGridHeight() {
-  const grid = document.getElementById('dashboard-cards')
-  if (!grid) return
-  
-  let maxBottom = 400
-  for (const card of gridState.cards) {
-    const bottom = (card.y + card.h) * (gridState.cellSize + GRID_GAP)
-    if (bottom > maxBottom) maxBottom = bottom
-  }
-  
-  grid.style.minHeight = (maxBottom + 50) + 'px'
 }
 
 // Apply positions to DOM
 function applyPositions() {
-  for (const card of gridState.cards) {
-    card.el.style.left = `calc(${card.x} * (var(--cell-size) + var(--grid-gap)))`
-    card.el.style.top = `calc(${card.y} * (var(--cell-size) + var(--grid-gap)))`
-    card.el.dataset.gridX = card.x
-    card.el.dataset.gridY = card.y
+  const grid = document.getElementById('dashboard-cards')
+  if (!grid) return
+  
+  // Find actual used width (rightmost panel edge)
+  let maxRight = 0
+  let maxBottom = 400
+  
+  for (const panel of gridState.panels) {
+    panel.el.style.left = `calc(${panel.x} * (var(--cell-size) + var(--grid-gap)))`
+    panel.el.style.top = `calc(${panel.y} * (var(--cell-size) + var(--grid-gap)))`
+    panel.el.dataset.gridX = panel.x
+    panel.el.dataset.gridY = panel.y
+    
+    const right = panel.x + panel.w
+    if (right > maxRight) maxRight = right
+    
+    const bottom = (panel.y + panel.h) * (CELL_SIZE + GRID_GAP)
+    if (bottom > maxBottom) maxBottom = bottom
   }
-  updateGridHeight()
+  
+  // Use actual content width for centering (not available cols)
+  // Width = usedCols * cell + (usedCols-1) * gap
+  const usedCols = Math.max(maxRight, MIN_COLS)
+  const gridWidth = usedCols * CELL_SIZE + (usedCols - 1) * GRID_GAP
+  
+  grid.style.setProperty('--grid-cols', gridState.cols)
+  grid.style.width = gridWidth + 'px'
+  grid.style.minHeight = (maxBottom + 50) + 'px'
 }
 
-// Save all card positions to backend
-async function saveAllPositions() {
-  const updates = gridState.cards.map(c => ({
-    id: c.id.replace(/^panel-/, ''),
-    position: { x: c.x, y: c.y }
+// Full reflow
+function reflow() {
+  if (isMobile()) return
+  buildGridState()
+  flowLayout()
+  applyPositions()
+}
+
+// Save panel order to backend
+async function saveOrder() {
+  const updates = gridState.panels.map((p, idx) => ({
+    id: p.id.replace(/^panel-/, ''),
+    order: idx
   }))
   
   try {
-    await fetch('/api/panels/positions', {
+    await fetch('/api/panels/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ panels: updates })
     })
   } catch (e) {
-    console.error('Failed to save positions:', e)
+    console.error('Failed to save order:', e)
   }
 }
 
-// Card drag functionality
+// Drag functionality
 function initCardDrag() {
-  let dragCard = null
+  let dragPanel = null
   let dragPlaceholder = null
+  let dragStartOrder = -1
   
   document.addEventListener('mousedown', (e) => {
-    // Skip on mobile
     if (isMobile()) return
     
     const handle = e.target.closest('.card-drag-handle')
@@ -235,65 +231,100 @@ function initCardDrag() {
     
     e.preventDefault()
     buildGridState()
+    flowLayout()
     
-    const cardState = gridState.cards.find(c => c.id === card.id)
-    if (!cardState) return
+    const panelState = gridState.panels.find(p => p.id === card.id)
+    if (!panelState) return
     
-    dragCard = cardState
-    const cellSize = CELL_SIZE
-    const cols = gridState.cols
+    dragPanel = panelState
+    dragStartOrder = panelState.order
+    
     const startX = e.clientX
     const startY = e.clientY
-    const startGridX = cardState.x
-    const startGridY = cardState.y
+    const startLeft = panelState.x * (CELL_SIZE + GRID_GAP)
+    const startTop = panelState.y * (CELL_SIZE + GRID_GAP)
     
     // Create placeholder
     dragPlaceholder = document.createElement('div')
     dragPlaceholder.className = 'card-placeholder'
     dragPlaceholder.style.cssText = `
       position: absolute;
-      left: calc(${startGridX} * (var(--cell-size) + var(--grid-gap)));
-      top: calc(${startGridY} * (var(--cell-size) + var(--grid-gap)));
-      width: calc(${cardState.w} * var(--cell-size) + ${cardState.w - 1} * var(--grid-gap));
-      height: calc(${cardState.h} * var(--cell-size) + ${cardState.h - 1} * var(--grid-gap));
+      left: ${startLeft}px;
+      top: ${startTop}px;
+      width: calc(${panelState.w} * var(--cell-size) + ${panelState.w - 1} * var(--grid-gap));
+      height: calc(${panelState.h} * var(--cell-size) + ${panelState.h - 1} * var(--grid-gap));
       border: 2px dashed var(--kb-border);
       border-radius: 0.5rem;
-      opacity: 0.5;
+      background: var(--kb-bg-hover);
+      opacity: 0.3;
       pointer-events: none;
+      transition: left 0.15s, top 0.15s;
     `
     card.parentElement.appendChild(dragPlaceholder)
     
     card.style.zIndex = '100'
-    card.style.transition = 'none'
-    card.style.opacity = '0.9'
+    card.style.transition = 'box-shadow 0.2s'
+    card.style.opacity = '0.95'
     card.style.boxShadow = '0 10px 40px rgba(0,0,0,0.3)'
     
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      // Free movement for the dragged card
-      card.style.left = `calc(${startGridX} * (var(--cell-size) + var(--grid-gap)) + ${deltaX}px)`
-      card.style.top = `calc(${startGridY} * (var(--cell-size) + var(--grid-gap)) + ${deltaY}px)`
+      // Move card freely
+      card.style.left = (startLeft + deltaX) + 'px'
+      card.style.top = (startTop + deltaY) + 'px'
       
-      // Calculate snapped grid position
-      const cardW = Math.min(cardState.w, cols)
-      let newX = startGridX + Math.round(deltaX / (cellSize + GRID_GAP))
-      let newY = startGridY + Math.round(deltaY / (cellSize + GRID_GAP))
-      newX = Math.max(0, Math.min(cols - cardW, newX))
-      newY = Math.max(0, newY)
+      // Calculate target grid position
+      const cols = gridState.cols
+      const panelW = Math.min(panelState.w, cols)
+      let targetX = Math.round((startLeft + deltaX) / (CELL_SIZE + GRID_GAP))
+      let targetY = Math.round((startTop + deltaY) / (CELL_SIZE + GRID_GAP))
+      targetX = Math.max(0, Math.min(cols - panelW, targetX))
+      targetY = Math.max(0, targetY)
       
-      // Update placeholder position
-      dragPlaceholder.style.left = `calc(${newX} * (var(--cell-size) + var(--grid-gap)))`
-      dragPlaceholder.style.top = `calc(${newY} * (var(--cell-size) + var(--grid-gap)))`
+      // Find which order position this corresponds to
+      // Look at center points of other panels
+      let newOrder = gridState.panels.length - 1
+      const dragCenterX = targetX + panelW / 2
+      const dragCenterY = targetY + panelState.h / 2
       
-      // Update dragged card position and recompact
-      if (newX !== cardState.x || newY !== cardState.y) {
-        cardState.x = newX
-        cardState.y = newY
-        // Recompact all other cards around the dragged card
-        compactCards(cardState.id)
-        applyPositions()
+      for (let i = 0; i < gridState.panels.length; i++) {
+        const p = gridState.panels[i]
+        if (p.id === dragPanel.id) continue
+        
+        const pCenterY = p.y + p.h / 2
+        const pCenterX = p.x + p.w / 2
+        
+        // If drag is above this panel's center, insert before it
+        if (dragCenterY < pCenterY || (dragCenterY === pCenterY && dragCenterX < pCenterX)) {
+          newOrder = i
+          break
+        }
+      }
+      
+      // Reorder if changed
+      if (newOrder !== dragPanel.order) {
+        // Remove from current position
+        gridState.panels = gridState.panels.filter(p => p.id !== dragPanel.id)
+        // Insert at new position
+        gridState.panels.splice(newOrder, 0, dragPanel)
+        // Update order values
+        gridState.panels.forEach((p, idx) => p.order = idx)
+        
+        // Reflow all except dragged panel
+        flowLayout()
+        
+        // Update placeholder position
+        dragPlaceholder.style.left = `calc(${dragPanel.x} * (var(--cell-size) + var(--grid-gap)))`
+        dragPlaceholder.style.top = `calc(${dragPanel.y} * (var(--cell-size) + var(--grid-gap)))`
+        
+        // Apply positions to other panels
+        for (const p of gridState.panels) {
+          if (p.id === dragPanel.id) continue
+          p.el.style.left = `calc(${p.x} * (var(--cell-size) + var(--grid-gap)))`
+          p.el.style.top = `calc(${p.y} * (var(--cell-size) + var(--grid-gap)))`
+        }
       }
     }
     
@@ -314,10 +345,12 @@ function initCardDrag() {
       // Snap to final position
       applyPositions()
       
-      // Save all positions
-      await saveAllPositions()
+      // Save new order if changed
+      if (dragPanel.order !== dragStartOrder) {
+        await saveOrder()
+      }
       
-      dragCard = null
+      dragPanel = null
     }
     
     document.addEventListener('mousemove', onMouseMove)
@@ -325,10 +358,9 @@ function initCardDrag() {
   })
 }
 
-// Card resize functionality
+// Resize functionality
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
-    // Skip on mobile
     if (isMobile()) return
     
     const handle = e.target.closest('.card-resize-handle')
@@ -336,20 +368,20 @@ function initCardResize() {
     
     e.preventDefault()
     buildGridState()
+    flowLayout()
     
     const cardId = handle.dataset.cardId || handle.dataset.panelId
     const card = document.getElementById('card-' + cardId) || document.getElementById('panel-' + cardId)
     if (!card) return
     
-    const cardState = gridState.cards.find(c => c.id === card.id)
-    if (!cardState) return
+    const panelState = gridState.panels.find(p => p.id === card.id)
+    if (!panelState) return
     
-    const cellSize = CELL_SIZE
     const cols = gridState.cols
     const startX = e.clientX
     const startY = e.clientY
-    const startW = cardState.w
-    const startH = cardState.h
+    const startW = panelState.w
+    const startH = panelState.h
     
     // Get minimum size
     let minW = 2, minH = 2
@@ -366,23 +398,24 @@ function initCardResize() {
       card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').trim()
       card.classList.add('card', `w${w}`, `h${h}`)
       card.dataset.gridSize = `${w}x${h}`
-      cardState.w = w
-      cardState.h = h
+      panelState.w = w
+      panelState.h = h
     }
     
     const onMouseMove = (e) => {
       const deltaX = e.clientX - startX
       const deltaY = e.clientY - startY
       
-      let newW = startW + Math.round(deltaX / (cellSize + GRID_GAP))
-      let newH = startH + Math.round(deltaY / (cellSize + GRID_GAP))
+      let newW = startW + Math.round(deltaX / (CELL_SIZE + GRID_GAP))
+      let newH = startH + Math.round(deltaY / (CELL_SIZE + GRID_GAP))
       
-      newW = Math.max(minW, Math.min(cols - cardState.x, newW))
+      // Clamp to valid range
+      newW = Math.max(minW, Math.min(cols, newW))
       newH = Math.max(minH, Math.min(8, newH))
       
-      if (newW !== cardState.w || newH !== cardState.h) {
+      if (newW !== panelState.w || newH !== panelState.h) {
         updateCardSize(newW, newH)
-        compactCards(cardState.id)
+        flowLayout()
         applyPositions()
       }
     }
@@ -393,17 +426,16 @@ function initCardResize() {
       
       card.style.transition = ''
       
-      // Save size and position
-      const newSize = `${cardState.w}x${cardState.h}`
+      // Save size
+      const newSize = `${panelState.w}x${panelState.h}`
       try {
         await fetch(`/api/panels/${cardId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ size: newSize })
         })
-        await saveAllPositions()
       } catch (e) {
-        console.error('Failed to save:', e)
+        console.error('Failed to save size:', e)
       }
     }
     
@@ -412,36 +444,31 @@ function initCardResize() {
   })
 }
 
-// Track mobile state
-let wasMobile = false
-
-// Initialize on load
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  wasMobile = isMobile()
-  buildGridState()
-  if (!wasMobile) {
-    applyPositions()
+  if (!isMobile()) {
+    reflow()
   }
   initCardDrag()
   initCardResize()
 })
 
-// Update on resize
+// Reflow on resize
+let resizeTimeout = null
 window.addEventListener('resize', () => {
-  const nowMobile = isMobile()
-  
-  // Switching from mobile to desktop - reapply positions
-  if (wasMobile && !nowMobile) {
-    buildGridState()
-    applyPositions()
+  clearTimeout(resizeTimeout)
+  resizeTimeout = setTimeout(() => {
+    if (!isMobile()) {
+      reflow()
+    }
+  }, 100)
+})
+
+// Reflow after HTMX swaps (new panels added)
+document.body.addEventListener('htmx:afterSwap', (e) => {
+  if (e.detail.target.id === 'dashboard-cards') {
+    setTimeout(reflow, 50)
   }
-  
-  // Update grid height when not mobile
-  if (!nowMobile) {
-    updateGridHeight()
-  }
-  
-  wasMobile = nowMobile
 })
 
 // Generate a simple session ID

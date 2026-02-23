@@ -286,3 +286,46 @@ async def update_panel_positions(request: UpdatePositionsRequest):
         update_panel_layout(item.id, position=item.position)
     
     return {"success": True, "updated": len(request.panels)}
+
+
+# === Batch Order Update ===
+
+class PanelOrder(BaseModel):
+    id: str
+    order: int
+
+
+class UpdateOrderRequest(BaseModel):
+    panels: list[PanelOrder]
+
+
+@router.post("/order")
+async def update_panel_order(request: UpdateOrderRequest):
+    """Batch update panel order."""
+    from app.services.dashboard import get_dashboard, save_dashboard
+    
+    dashboard = get_dashboard()
+    panels = dashboard.get("panels", dashboard.get("cards", []))
+    
+    # Create lookup
+    order_map = {item.id: item.order for item in request.panels}
+    
+    # Update order for each panel
+    for panel in panels:
+        panel_id = panel.get("id", "")
+        # Strip panel- prefix if present
+        clean_id = panel_id.replace("panel-", "") if panel_id.startswith("panel-") else panel_id
+        
+        if panel_id in order_map:
+            panel["order"] = order_map[panel_id]
+        elif clean_id in order_map:
+            panel["order"] = order_map[clean_id]
+    
+    # Sort panels by order
+    panels.sort(key=lambda p: p.get("order", 0))
+    
+    # Save
+    dashboard["panels"] = panels
+    save_dashboard(dashboard)
+    
+    return {"success": True, "updated": len(request.panels)}

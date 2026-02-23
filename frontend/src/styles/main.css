@@ -271,8 +271,8 @@
   --cell-size: 70px;
   --grid-gap: 8px;
   --grid-cols: 12;
-  /* Center the grid content */
-  width: calc(var(--grid-cols) * (var(--cell-size) + var(--grid-gap)));
+  /* Center the grid: width = cols * cell + (cols-1) * gap */
+  width: calc(var(--grid-cols) * var(--cell-size) + (var(--grid-cols) - 1) * var(--grid-gap));
   max-width: 100%;
   margin: 0 auto;
 }
