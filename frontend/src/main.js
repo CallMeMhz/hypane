@@ -596,6 +596,10 @@ Alpine.data('chatBox', () => ({
   },
 
   handleKeydown(e) {
+    // 忽略输入法组合状态下的回车（中文、日文等）
+    if (e.isComposing || e.keyCode === 229) {
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       this.send()
