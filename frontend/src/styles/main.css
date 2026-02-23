@@ -8,6 +8,7 @@
  * we need to go up 3 levels to reach app/templates
  */
 @source "../../../app/templates/**/*.html";
+@source "../../../data/panels/*/facade.html";
 
 /* Enable dark mode via class */
 @variant dark (&:where(.dark, .dark *));
@@ -204,6 +205,21 @@
   .chat-message-assistant {
     background-color: var(--kb-bg-primary);
     color: var(--kb-text-normal);
+  }
+  
+  /* Chat thinking blocks - dimmed style */
+  .chat-thinking {
+    color: var(--kb-text-ghost);
+    font-size: 0.85em;
+    font-style: italic;
+    border-left: 2px solid var(--kb-border);
+    padding-left: 0.75rem;
+    margin: 0.5rem 0;
+    opacity: 0.7;
+  }
+  
+  .chat-thinking p {
+    margin: 0.25rem 0;
   }
   
   /* Links */

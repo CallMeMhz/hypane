@@ -90,32 +90,79 @@ async def get_session(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     messages = []
+    pending_tools = {}  # tool_call_id -> message index
+    
     try:
         with open(filepath, 'r') as f:
             for line in f:
                 if line.strip():
                     entry = json.loads(line)
-                    # pi session format
+                    
+                    # pi session format: type=message
                     if entry.get('type') == 'message':
                         msg = entry.get('message', {})
                         role = msg.get('role', 'unknown')
-                        content = extract_text_content(msg.get('content', ''))
                         
-                        # Skip tool calls, only show user and assistant text
-                        if role in ('user', 'assistant') and content:
-                            # For user messages, strip the system context
-                            if role == 'user' and '\n\n' in content:
-                                parts = content.split('\n\n')
-                                # Find actual user message (after context)
-                                for part in reversed(parts):
-                                    if not part.startswith('[Current time:') and not part.startswith('[') and part.strip():
-                                        content = part
-                                        break
+                        # Skip toolResult messages (just mark tool status)
+                        if role == 'toolResult':
+                            tool_id = msg.get('toolCallId', '')
+                            is_error = msg.get('isError', False)
+                            if tool_id in pending_tools and is_error:
+                                idx = pending_tools[tool_id]
+                                if idx < len(messages):
+                                    messages[idx]['status'] = 'error'
+                            continue
+                        
+                        content_items = msg.get('content', [])
+                        
+                        # Handle string content
+                        if isinstance(content_items, str):
+                            content_items = [{'type': 'text', 'text': content_items}]
+                        
+                        for item in content_items:
+                            if isinstance(item, dict):
+                                item_type = item.get('type')
+                                
+                                # Text content
+                                if item_type == 'text':
+                                    text = item.get('text', '')
+                                    if not text:
+                                        continue
+                                    
+                                    # For user messages, strip the system context
+                                    if role == 'user' and '\n\n' in text:
+                                        parts = text.split('\n\n')
+                                        for part in reversed(parts):
+                                            if not part.startswith('[Current time:') and not part.startswith('[') and part.strip():
+                                                text = part
+                                                break
+                                    
+                                    messages.append({
+                                        'role': role,
+                                        'content': text
+                                    })
+                                
+                                # Tool call (from assistant)
+                                elif item_type == 'toolCall':
+                                    tool_id = item.get('id', '')
+                                    tool_name = item.get('name', 'tool')
+                                    tool_args = item.get('arguments', {})
+                                    
+                                    display = tool_name
+                                    if tool_args.get('command'):
+                                        display += f": {tool_args['command'][:50]}"
+                                    elif tool_args.get('path'):
+                                        display += f": {tool_args['path']}"
+                                    elif tool_args.get('panelId'):
+                                        display += f": {tool_args['panelId']}"
+                                    
+                                    messages.append({
+                                        'role': 'tool',
+                                        'content': display,
+                                        'status': 'done'
+                                    })
+                                    pending_tools[tool_id] = len(messages) - 1
                             
-                            messages.append({
-                                'role': role,
-                                'content': content
-                            })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     

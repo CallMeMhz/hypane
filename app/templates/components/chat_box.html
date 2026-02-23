@@ -83,7 +83,11 @@
         </div>
 
         <!-- Messages -->
-        <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3" style="background: var(--kb-bg-secondary);">
+        <div x-ref="messagesContainer" 
+             @wheel.stop
+             @touchmove.stop
+             class="flex-1 overflow-y-auto p-4 space-y-3" 
+             style="background: var(--kb-bg-secondary); overscroll-behavior: contain;">
           <template x-if="messages.length === 0 && !loading">
             <div class="text-center py-12" style="color: var(--kb-text-faint);">
               <p class="text-sm">How can I help you?</p>

@@ -18,10 +18,39 @@ marked.setOptions({
 import Alpine from 'alpinejs'
 window.Alpine = Alpine
 
-// Render markdown to HTML
+// Render markdown to HTML, with special handling for <think> blocks
 window.renderMarkdown = function(text) {
   if (!text) return ''
-  return marked.parse(text)
+  
+  // Handle <think>...</think> blocks - render them dimmed
+  // Use placeholder to avoid double-parsing
+  const thinkBlocks = []
+  let processed = text
+  
+  // Complete think blocks: <think>content</think>
+  processed = processed.replace(/<think>([\s\S]*?)<\/think>/g, (match, content) => {
+    const idx = thinkBlocks.length
+    thinkBlocks.push(content.trim())
+    return `<!--THINK_${idx}-->`
+  })
+  
+  // Incomplete/streaming think block: <think>content (no closing tag yet)
+  processed = processed.replace(/<think>([\s\S]*)$/g, (match, content) => {
+    const idx = thinkBlocks.length
+    thinkBlocks.push(content.trim())
+    return `<!--THINK_${idx}-->`
+  })
+  
+  // Render markdown once
+  let html = marked.parse(processed)
+  
+  // Replace placeholders with styled think blocks
+  thinkBlocks.forEach((content, idx) => {
+    const rendered = content ? marked.parse(content) : ''
+    html = html.replace(`<!--THINK_${idx}-->`, `<div class="chat-thinking">${rendered}</div>`)
+  })
+  
+  return html
 }
 
 // ============================================
