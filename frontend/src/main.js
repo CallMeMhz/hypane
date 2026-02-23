@@ -174,15 +174,15 @@ function applyPositions() {
 // Save all card positions to backend
 async function saveAllPositions() {
   const updates = gridState.cards.map(c => ({
-    id: c.id.replace('card-', ''),
+    id: c.id.replace(/^panel-/, ''),
     position: { x: c.x, y: c.y }
   }))
   
   try {
-    await fetch('/api/cards/positions', {
+    await fetch('/api/panels/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cards: updates })
+      body: JSON.stringify({ panels: updates })
     })
   } catch (e) {
     console.error('Failed to save positions:', e)
@@ -308,8 +308,8 @@ function initCardResize() {
     e.preventDefault()
     buildGridState()
     
-    const cardId = handle.dataset.cardId
-    const card = document.getElementById('card-' + cardId)
+    const cardId = handle.dataset.cardId || handle.dataset.panelId
+    const card = document.getElementById('card-' + cardId) || document.getElementById('panel-' + cardId)
     if (!card) return
     
     const cardState = gridState.cards.find(c => c.id === card.id)
@@ -364,10 +364,10 @@ function initCardResize() {
       
       card.style.transition = ''
       
-      // Save size and positions
+      // Save size and position
       const newSize = `${cardState.w}x${cardState.h}`
       try {
-        await fetch(`/api/cards/${cardId}`, {
+        await fetch(`/api/panels/${cardId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ size: newSize })
@@ -427,8 +427,8 @@ window.insertCardToChat = async function(cardId) {
   
   const chatBox = Alpine.$data(chatBoxEl)
   
-  // Get card element and extract info
-  const cardEl = document.getElementById('card-' + cardId)
+  // Get panel/card element and extract info (support both panel-* and card-* IDs)
+  const cardEl = document.getElementById('panel-' + cardId) || document.getElementById('card-' + cardId)
   if (!cardEl) return
   
   const titleEl = cardEl.querySelector('h3')
@@ -438,15 +438,15 @@ window.insertCardToChat = async function(cardId) {
   const contentEl = cardEl.querySelector('.card-content')
   const renderedHtml = contentEl ? contentEl.innerHTML.trim() : ''
   
-  // Fetch original card data from API
+  // Fetch panel data from API
   let cardData = null
   try {
-    const res = await fetch(`/api/cards/${cardId}`)
+    const res = await fetch(`/api/panels/${cardId}`)
     if (res.ok) {
       cardData = await res.json()
     }
   } catch (e) {
-    console.error('Failed to fetch card data:', e)
+    console.error('Failed to fetch panel data:', e)
   }
   
   // Expand chat panel

@@ -1,96 +1,139 @@
+"""Dashboard service - manages layout and panel arrangement."""
+
 import json
 from typing import Any
 
 from app.config import DASHBOARD_FILE
-from app.services.card_data import get_card_data
+from app.services.panels import get_panel, get_panel_data, list_panels
 
 
-def _normalize_card(card: dict[str, Any]) -> dict[str, Any]:
-    """Normalize card content - parse JSON strings if needed."""
-    content = card.get("content")
-    if isinstance(content, str):
-        try:
-            card["content"] = json.loads(content)
-        except json.JSONDecodeError:
-            pass  # Keep as string if not valid JSON
-    return card
-
-
-def _enrich_card(card: dict[str, Any]) -> dict[str, Any]:
-    """Enrich card with live data from providers."""
-    live_data = get_card_data(card)
-    if live_data:
-        # Merge live data into content
-        card = card.copy()
-        card["content"] = {**card.get("content", {}), **live_data}
-    return card
-
-
-def get_dashboard(enrich: bool = True) -> dict[str, Any]:
+def get_dashboard_layout() -> dict[str, Any]:
     """
-    Read dashboard.json and return its content.
-    
-    Args:
-        enrich: If True, enrich cards with live data from providers
+    Get dashboard layout (panel positions and sizes).
     """
     if not DASHBOARD_FILE.exists():
-        return {"cards": [], "userPreferences": {}}
+        return {"version": 2, "panels": []}
     
     with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
     
-    # Normalize all cards
-    cards = [_normalize_card(card) for card in data.get("cards", [])]
+    # Handle legacy format (version 1 with 'cards')
+    if data.get("version", 1) == 1 and "cards" in data:
+        return data  # Will be migrated separately
     
-    # Enrich with live data
-    if enrich:
-        cards = [_enrich_card(card) for card in cards]
-    
-    data["cards"] = cards
     return data
 
 
-def save_dashboard(data: dict[str, Any]) -> None:
-    """Save data to dashboard.json."""
+def save_dashboard_layout(data: dict[str, Any]) -> None:
+    """Save dashboard layout."""
     DASHBOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
+    data["version"] = 2
     with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def get_card(card_id: str) -> dict[str, Any] | None:
-    """Get a single card by ID."""
-    dashboard = get_dashboard()
-    for card in dashboard.get("cards", []):
-        if card.get("id") == card_id:
-            return card
+def get_panel_layout(panel_id: str) -> dict | None:
+    """Get layout info for a specific panel."""
+    layout = get_dashboard_layout()
+    for p in layout.get("panels", []):
+        if p.get("id") == panel_id:
+            return p
     return None
 
 
-def update_card(card_id: str, updates: dict[str, Any]) -> bool:
-    """Update a card by ID."""
-    dashboard = get_dashboard()
-    for card in dashboard.get("cards", []):
-        if card.get("id") == card_id:
-            card.update(updates)
-            save_dashboard(dashboard)
+def update_panel_layout(panel_id: str, position: dict = None, size: str = None) -> bool:
+    """Update panel position/size in layout."""
+    layout = get_dashboard_layout()
+    
+    for p in layout.get("panels", []):
+        if p.get("id") == panel_id:
+            if position is not None:
+                p["position"] = position
+            if size is not None:
+                p["size"] = size
+            save_dashboard_layout(layout)
             return True
+    
     return False
 
 
-def add_card(card: dict[str, Any]) -> None:
-    """Add a new card to dashboard."""
-    dashboard = get_dashboard()
-    dashboard.setdefault("cards", []).append(card)
-    save_dashboard(dashboard)
+def add_panel_to_layout(panel_id: str, position: dict = None, size: str = "3x2") -> None:
+    """Add a panel to the layout."""
+    layout = get_dashboard_layout()
+    
+    # Default position: find next available spot
+    if position is None:
+        max_y = 0
+        for p in layout.get("panels", []):
+            pos = p.get("position", {})
+            panel_size = p.get("size", "3x2")
+            if "x" in panel_size:
+                h = int(panel_size.split("x")[1])
+            else:
+                h = 2
+            bottom = pos.get("y", 0) + h
+            if bottom > max_y:
+                max_y = bottom
+        position = {"x": 0, "y": max_y}
+    
+    layout.setdefault("panels", []).append({
+        "id": panel_id,
+        "position": position,
+        "size": size,
+    })
+    
+    save_dashboard_layout(layout)
 
 
-def delete_card(card_id: str) -> bool:
-    """Delete a card by ID."""
-    dashboard = get_dashboard()
-    cards = dashboard.get("cards", [])
-    original_len = len(cards)
-    dashboard["cards"] = [c for c in cards if c.get("id") != card_id]
-    if len(dashboard["cards"]) < original_len:
-        save_dashboard(dashboard)
+def remove_panel_from_layout(panel_id: str) -> bool:
+    """Remove a panel from the layout."""
+    layout = get_dashboard_layout()
+    panels = layout.get("panels", [])
+    original_len = len(panels)
+    layout["panels"] = [p for p in panels if p.get("id") != panel_id]
+    
+    if len(layout["panels"]) < original_len:
+        save_dashboard_layout(layout)
         return True
     return False
+
+
+def get_dashboard(enrich: bool = True) -> dict[str, Any]:
+    """
+    Get full dashboard with panel data merged.
+    This is what the frontend needs for rendering.
+    """
+    layout = get_dashboard_layout()
+    
+    # Handle legacy format
+    if layout.get("version", 1) == 1 and "cards" in layout:
+        # Return legacy format as-is for backward compat
+        return layout
+    
+    # Build full panel list with data
+    panels = []
+    for panel_layout in layout.get("panels", []):
+        panel_id = panel_layout.get("id")
+        panel_data = get_panel_data(panel_id)
+        
+        if panel_data:
+            panels.append({
+                **panel_data,
+                "position": panel_layout.get("position", {"x": 0, "y": 0}),
+                "size": panel_layout.get("size", "3x2"),
+            })
+    
+    return {
+        "version": 2,
+        "panels": panels,
+        "userPreferences": layout.get("userPreferences", {}),
+    }
+
+
+# === Legacy compatibility ===
+
+def save_dashboard(data: dict[str, Any]) -> None:
+    """Legacy: Save full dashboard (for old code paths)."""
+    DASHBOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)

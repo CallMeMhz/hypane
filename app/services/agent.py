@@ -39,18 +39,18 @@ def get_system_context() -> str:
     
     # Dashboard outline
     dashboard = get_dashboard()
-    cards = dashboard.get("cards", [])
+    panels = dashboard.get("panels", dashboard.get("cards", []))
     
-    if cards:
-        lines.append(f"\nDashboard ({len(cards)} cards):")
-        for i, card in enumerate(cards):
-            card_id = card.get("id", "?")
-            card_type = card.get("type", "?")
-            card_title = card.get("title", "(no title)")
-            card_size = card.get("size", "medium")
-            lines.append(f"  {i+1}. [{card_id}] {card_type} - {card_title} ({card_size})")
+    if panels:
+        lines.append(f"\nDashboard ({len(panels)} panels):")
+        for i, panel in enumerate(panels):
+            panel_id = panel.get("id", "?")
+            panel_type = panel.get("type", "?")
+            panel_title = panel.get("title", "(no title)")
+            panel_size = panel.get("size", "3x2")
+            lines.append(f"  {i+1}. [{panel_id}] {panel_type} - {panel_title} ({panel_size})")
     else:
-        lines.append("\nDashboard: empty (no cards)")
+        lines.append("\nDashboard: empty (no panels)")
     
     # Scheduled tasks
     tasks = get_scheduled_tasks()
@@ -216,8 +216,8 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
                     tool_name = event.get("toolName", "")
                     tool_args = event.get("args", {})
                     
-                    # 检测 dashboard 相关操作
-                    if tool_name.startswith("dashboard_") and tool_name != "dashboard_list_cards" and tool_name != "dashboard_get_card":
+                    # 检测 panel 相关操作（修改类）
+                    if tool_name.startswith("panel_") and tool_name not in ("panel_list", "panel_get"):
                         dashboard_updated = True
                     
                     display_args = {}
@@ -228,12 +228,12 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
                     elif tool_name in ("edit", "write"):
                         display_args = {"path": tool_args.get("path", "")}
                         path = tool_args.get("path", "")
-                        if "dashboard" in path.lower():
+                        if "dashboard" in path.lower() or "panels" in path.lower():
                             dashboard_updated = True
-                    elif tool_name.startswith("dashboard_"):
-                        # 显示 dashboard 工具的参数
-                        if "cardId" in tool_args:
-                            display_args = {"cardId": tool_args["cardId"]}
+                    elif tool_name.startswith("panel_"):
+                        # 显示 panel 工具的参数
+                        if "panelId" in tool_args:
+                            display_args = {"panelId": tool_args["panelId"]}
                         elif "type" in tool_args:
                             display_args = {"type": tool_args["type"], "title": tool_args.get("title", "")}
                     

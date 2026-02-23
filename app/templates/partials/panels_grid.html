@@ -1,0 +1,10 @@
+{# Panels Grid Partial - for HTMX refresh #}
+{% set items = panels if panels else cards %}
+{% for panel in items %}
+  {% include "partials/panel.html" %}
+{% else %}
+  <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
+    <p class="text-sm">No panels yet</p>
+    <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant to get started</p>
+  </div>
+{% endfor %}

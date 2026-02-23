@@ -1,5 +1,5 @@
-<!-- Card Partial - renders a single card -->
-{% set grid_size = card.size or '3x2' %}
+<!-- Panel Partial - renders a single panel -->
+{% set grid_size = panel.size or '3x2' %}
 {% if 'x' in grid_size %}
   {% set w = grid_size.split('x')[0] %}
   {% set h = grid_size.split('x')[1] %}
@@ -7,24 +7,25 @@
 {% else %}
   {% set size_class = 'card-' ~ grid_size %}
 {% endif %}
-{% set pos = card.position or {} %}
+{% set pos = panel.position or {} %}
 {% set pos_x = pos.x if pos.x is defined else 0 %}
 {% set pos_y = pos.y if pos.y is defined else 0 %}
-{% set min_size = card.content.minSize if card.content is mapping and card.content.minSize else '2x2' %}
+{% set min_size = panel.minSize or '2x2' %}
 
 <div 
-  id="card-{{ card.id }}"
+  id="panel-{{ panel.id }}"
   class="card {{ size_class }}"
   style="left: calc({{ pos_x }} * (var(--cell-size) + var(--grid-gap))); top: calc({{ pos_y }} * (var(--cell-size) + var(--grid-gap)));"
+  data-panel-id="{{ panel.id }}"
   data-grid-size="{{ grid_size }}"
   data-min-size="{{ min_size }}"
   data-grid-x="{{ pos_x }}"
   data-grid-y="{{ pos_y }}"
-  hx-get="/cards/{{ card.id }}"
-  hx-trigger="refresh-{{ card.id }} from:body"
+  hx-get="/panels/{{ panel.id }}"
+  hx-trigger="refresh-{{ panel.id }} from:body"
   hx-swap="outerHTML"
 >
-  <!-- Card Header -->
+  <!-- Panel Header -->
   <div class="flex items-center justify-between mb-3 group/header">
     <div class="flex items-center gap-2 relative">
       <!-- Drag handle -->
@@ -40,14 +41,14 @@
           <circle cx="15" cy="18" r="1.5"/>
         </svg>
       </div>
-      <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">{{ card.title }}</h3>
+      <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">{{ panel.title }}</h3>
       <!-- Magic wand button -->
       <button 
         class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 delay-500 p-1 rounded"
         style="color: var(--kb-text-ghost);"
         onmouseover="this.style.color='var(--kb-text-muted)'; this.style.backgroundColor='var(--kb-bg-tertiary)';"
         onmouseout="this.style.color='var(--kb-text-ghost)'; this.style.backgroundColor='transparent';"
-        onclick="insertCardToChat('{{ card.id }}')"
+        onclick="insertCardToChat('{{ panel.id }}')"
         title="Add to chat"
       >
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -58,22 +59,20 @@
     </div>
   </div>
 
-  <!-- Card Content -->
-  <div class="card-content" data-card-id="{{ card.id }}">
-    {% if card.content is mapping and card.content.html %}
-      {{ card.content.html | safe }}
-    {% elif card.content is mapping %}
-      <div class="text-sm" style="color: var(--kb-text-muted);">
-        <pre class="whitespace-pre-wrap">{{ card.content | tojson(indent=2) }}</pre>
-      </div>
+  <!-- Panel Content (Facade) -->
+  <div class="card-content" data-panel-id="{{ panel.id }}">
+    {% if panel.facade %}
+      {{ panel.facade | safe }}
     {% else %}
-      <div class="text-sm" style="color: var(--kb-text-muted);">{{ card.content }}</div>
+      <div class="text-sm" style="color: var(--kb-text-muted);">
+        No facade defined
+      </div>
     {% endif %}
   </div>
 
   <!-- Resize handle -->
   <div class="card-resize-handle" 
-       data-card-id="{{ card.id }}"
+       data-panel-id="{{ panel.id }}"
        title="Drag to resize">
     <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
       <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z"/>

@@ -43,16 +43,18 @@
     </div>
   </header>
 
-  <!-- Dashboard Cards Grid -->
+  <!-- Dashboard Panels Grid -->
   <div id="dashboard-cards" 
        class="dashboard-grid"
        hx-get="/dashboard-cards" 
        hx-trigger="refresh from:body">
-    {% for card in cards %}
-      {% include "partials/card.html" %}
+    {# Support both v1 (cards) and v2 (panels) formats #}
+    {% set items = panels if panels else cards %}
+    {% for panel in items %}
+      {% include "partials/panel.html" %}
     {% else %}
       <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
-        <p class="text-sm">No cards yet</p>
+        <p class="text-sm">No panels yet</p>
         <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant to get started</p>
       </div>
     {% endfor %}

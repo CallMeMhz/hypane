@@ -1,6 +1,6 @@
 # AI Dashboard
 
-AI 驱动的个人管理 Dashboard。Agent 在后台持续工作，成果以卡片形式展示。
+AI 驱动的个人 Dashboard。通过聊天创建和管理 Panel，数据持久化。
 
 ## 技术栈
 
@@ -11,82 +11,88 @@ AI 驱动的个人管理 Dashboard。Agent 在后台持续工作，成果以卡�
 
 ## 快速开始
 
-### 1. 安装依赖
-
 ```bash
-# Python 依赖 (使用 uv)
+# 1. 安装依赖
 uv sync
-
-# 前端依赖
 cd frontend && pnpm install
-```
 
-### 2. 构建前端
-
-```bash
+# 2. 构建前端
 cd frontend && pnpm build
-```
 
-### 3. 启动服务
-
-```bash
-# 开发模式
-uvicorn app.main:app --reload
-
-# 生产模式
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-### 4. 启动定时任务（可选）
-
-```bash
-python -m scheduler.main
-```
-
-## 开发
-
-### 前端开发
-
-```bash
-cd frontend
-pnpm dev  # Vite 开发服务器
-```
-
-### 后端开发
-
-```bash
+# 3. 启动服务
 uvicorn app.main:app --reload
 ```
 
-### 手动触发 Agent
+访问 http://localhost:8000
+
+## Panel 系统
+
+每个 Panel 是独立目录，包含：
+
+```
+data/panels/{panel_id}/
+├── facade.html   # 外观 (HTML + Alpine.js)
+├── data.json     # 数据 (元信息、状态)
+└── handler.py    # 后端逻辑 (可选，热重载)
+```
+
+### API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/panels` | 列出所有 panel |
+| POST | `/api/panels` | 创建 panel |
+| GET | `/api/panels/{id}` | 获取 panel |
+| PATCH | `/api/panels/{id}` | 更新 panel |
+| DELETE | `/api/panels/{id}` | 删除 panel |
+| PATCH | `/api/panels/{id}/data` | 更新数据 |
+| POST | `/api/panels/{id}/action` | 调用 handler |
+
+### 创建 Panel 示例
 
 ```bash
-# 执行特定 skill
-pi -p "检查新闻更新" --skill skills/news_hn.md
-
-# 与 Dashboard 对话
-pi -p "帮我添加一个待办事项：明天开会" --skill skills/_system.md
+curl -X POST http://localhost:8000/api/panels \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "todo",
+    "title": "My Tasks",
+    "facade": "<div x-data=\"{count: 0}\">...</div>",
+    "data": {"items": []},
+    "size": "3x4"
+  }'
 ```
 
 ## 目录结构
 
 ```
-ai-dashboard/
 ├── app/                  # FastAPI 后端
-│   ├── main.py
-│   ├── routes/
-│   ├── services/
-│   └── templates/
-├── frontend/             # 前端资源 (pnpm)
-├── scheduler/            # 定时任务
+│   ├── routes/           # API 路由
+│   ├── services/         # 业务逻辑
+│   └── templates/        # Jinja2 模板
+├── frontend/             # 前端 (Vite + Tailwind)
+├── data/
+│   ├── dashboard.json    # 布局信息
+│   └── panels/           # Panel 数据目录
 ├── skills/               # Agent Skills
-├── data/                 # 数据文件
-│   ├── dashboard.json
-│   └── tasks.json
+├── extensions/           # pi 扩展 (dashboard-tools.ts)
 └── static/               # 构建输出
 ```
 
-## 文档
+## 开发
 
-- [PLAN.md](PLAN.md) - 详细设计方案
-- [docs/DESIGN.md](docs/DESIGN.md) - UI 设计规范
+```bash
+# 前端开发 (热重载)
+cd frontend && pnpm dev
+
+# 后端开发
+uvicorn app.main:app --reload
+
+# 定时任务
+python -m scheduler.main
+```
+
+## Skills
+
+- `skills/_system.md` - 系统提示词
+- `skills/panel_examples.md` - Panel 模板示例
+- `skills/data_collection.md` - 数据采集配置

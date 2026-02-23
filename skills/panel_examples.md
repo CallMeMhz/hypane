@@ -1,6 +1,6 @@
-# 卡片示例
+# Panel 示例
 
-所有卡片都是自定义类型，通过 `content.html` 渲染。以下是常用卡片的参考示例。
+所有 panel 都通过 `facade.html` 渲染外观，`data.json` 存储数据，可选 `handler.py` 处理后端逻辑。
 
 ## 通用规则
 
@@ -8,8 +8,14 @@
 2. 深色模式用 `dark:` 前缀
 3. 颜色用 `gray-*` 系列保持简洁
 4. 交互功能用 Alpine.js (`x-data`, `x-init`, 等)
-5. 通过 `content.minSize` 指定最小尺寸，如 `"3x2"`
-6. **Card ID 占位符**：HTML 中需要引用 card ID 时，使用 `__CARD_ID__`，系统会自动替换为实际 ID
+5. 通过 `data.minSize` 指定最小尺寸，如 `"3x2"`
+6. **Panel ID 占位符**：facade.html 中需要引用 panel ID 时，使用 `__PANEL_ID__`，系统会自动替换为实际 ID
+
+## API
+
+- `GET /api/panels/{id}/data` - 获取 panel 数据
+- `PATCH /api/panels/{id}/data` - 更新 panel 数据（合并）
+- `POST /api/panels/{id}/action` - 调用 handler (需要 handler.py)
 
 ---
 
@@ -69,8 +75,7 @@
 <div 
   x-data="todoList()" 
   x-init="init()" 
-  data-card-id="__CARD_ID__"
-  data-items='[{"id":"1","text":"示例任务","done":false}]'
+  data-panel-id="__PANEL_ID__"
   style="display: flex; flex-direction: column; height: 100%;"
 >
   <div style="flex: 1; overflow-y: auto; min-height: 0;">
@@ -106,16 +111,24 @@ if (!window.todoList) {
     return {
       items: [],
       newText: '',
-      cardId: '',
-      init() {
-        this.cardId = this.$el.dataset.cardId;
-        this.items = JSON.parse(this.$el.dataset.items || '[]');
+      panelId: '',
+      async init() {
+        this.panelId = this.$el.dataset.panelId;
+        try {
+          const res = await fetch('/api/panels/' + this.panelId + '/data');
+          if (res.ok) {
+            const data = await res.json();
+            this.items = data.items || [];
+          }
+        } catch (e) {
+          console.error('Failed to load items:', e);
+        }
       },
       async save() {
-        await fetch('/api/cards/' + this.cardId, {
+        await fetch('/api/panels/' + this.panelId + '/data', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: { items: this.items } })
+          body: JSON.stringify({ items: this.items })
         });
       },
       toggle(id) {
@@ -138,7 +151,17 @@ if (!window.todoList) {
 </script>
 ```
 
-`__CARD_ID__` 会被系统自动替换为实际的 card ID。
+创建时在 `data` 里提供初始 items：
+```json
+{
+  "type": "todo",
+  "title": "My Tasks",
+  "facade": "...",
+  "data": { "items": [{"id": "1", "text": "First task", "done": false}] },
+  "size": "3x4",
+  "minSize": "3x4"
+}
+```
 
 ---
 
@@ -149,7 +172,6 @@ if (!window.todoList) {
 ```html
 <div x-data="{ 
   cookies: parseInt(localStorage.getItem('cookies') || '0'),
-  cps: 0,
   click() { 
     this.cookies++; 
     localStorage.setItem('cookies', this.cookies);
@@ -181,56 +203,6 @@ if (!window.todoList) {
       <div class="text-xs text-green-500">+2.4%</div>
     </div>
   </div>
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">Ξ</span>
-      <span class="font-medium text-gray-800 dark:text-gray-100">Ethereum</span>
-    </div>
-    <div class="text-right">
-      <div class="font-medium text-gray-800 dark:text-gray-100">$2,712</div>
-      <div class="text-xs text-red-500">-1.2%</div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## 新闻聚合
-
-**minSize**: `4x3`
-
-```html
-<div class="space-y-3 text-sm">
-  <a href="#" class="block group">
-    <div class="font-medium text-gray-800 dark:text-gray-100 group-hover:text-blue-500 transition-colors">
-      GPT-5 发布，支持多模态推理
-    </div>
-    <div class="text-xs text-gray-400 mt-1">Hacker News · 2小时前 · 523 points</div>
-  </a>
-  <a href="#" class="block group">
-    <div class="font-medium text-gray-800 dark:text-gray-100 group-hover:text-blue-500 transition-colors">
-      Rust 2026 路线图公布
-    </div>
-    <div class="text-xs text-gray-400 mt-1">Hacker News · 4小时前 · 312 points</div>
-  </a>
-</div>
-```
-
----
-
-## 提醒卡片
-
-**minSize**: `2x2`
-
-```html
-<div class="flex items-start gap-3">
-  <div class="text-2xl">⏰</div>
-  <div>
-    <div class="font-medium text-gray-800 dark:text-gray-100">团队周会</div>
-    <div class="text-sm text-gray-500 mt-1">今天 14:00</div>
-    <div class="text-xs text-gray-400 mt-2">会议室 A</div>
-  </div>
 </div>
 ```
 
@@ -238,8 +210,8 @@ if (!window.todoList) {
 
 ## 自定义 HTML 注意事项
 
-1. **不要用** `<script>` 标签，Alpine.js 的 `x-data` 内联即可
+1. **深色模式** 必须支持，用 `dark:` 前缀
 2. **图片** 用 emoji 或 SVG，避免外部图片加载
 3. **链接** 用 `target="_blank"` 打开新窗口
-4. **深色模式** 必须支持，用 `dark:` 前缀
-5. **间距** 用 Tailwind 的 `space-y-*`, `gap-*`, `p-*`, `m-*`
+4. **间距** 用 Tailwind 的 `space-y-*`, `gap-*`, `p-*`, `m-*`
+5. **持久化数据** 用 `fetch('/api/panels/{panelId}/data', { method: 'PATCH', ... })`
