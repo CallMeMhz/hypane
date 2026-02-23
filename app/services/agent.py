@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator, Optional
 
-from app.config import PI_COMMAND, SKILLS, SESSIONS_DIR, DASHBOARD_EXTENSION
+from app.config import PI_COMMAND, SKILLS, SESSIONS_DIR, DASHBOARD_EXTENSION, BASE_DIR
 from app.services.dashboard import get_dashboard
 
 # 增大行缓冲区限制到 10MB
@@ -88,6 +88,7 @@ async def run_agent_chat(message: str) -> dict:
             capture_output=True,
             text=True,
             timeout=120,
+            cwd=BASE_DIR,
         )
 
         if result.returncode == 0:
@@ -150,14 +151,16 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
     if session_file:
         cmd.extend(["--session", str(session_file)])
     
-    print(f"[DEBUG] Running pi (session: {session_file})", file=sys.stderr)
+    print(f"[DEBUG] Running pi (session: {session_file}, cwd: {BASE_DIR})", file=sys.stderr)
 
     # 使用更大的 limit 来处理长行
+    # cwd 限制在项目目录，防止访问其他项目
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         limit=STREAM_LIMIT,
+        cwd=BASE_DIR,
     )
 
     dashboard_updated = False
@@ -281,6 +284,7 @@ async def run_skill(skill_path: str, task_name: str) -> dict:
             capture_output=True,
             text=True,
             timeout=300,
+            cwd=BASE_DIR,
         )
         return {
             "success": result.returncode == 0,
