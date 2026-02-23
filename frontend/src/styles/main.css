@@ -110,8 +110,9 @@
   .card-content {
     color: var(--kb-text-normal);
     flex: 1;
-    overflow-y: auto;
     min-height: 0;
+    position: relative;
+    overflow: hidden;
   }
   
   /* Custom HTML content */
