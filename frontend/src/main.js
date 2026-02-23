@@ -30,20 +30,13 @@ window.renderMarkdown = function(text) {
 
 const CELL_SIZE = 70  // Fixed cell size (no scaling)
 const GRID_GAP = 8    // Microsoft uses 8px gap
+const GRID_COLS = 12  // Fixed 12 columns
 const MOBILE_BREAKPOINT = 768
-
-// Get current grid columns based on viewport
-function getGridCols() {
-  const width = window.innerWidth
-  if (width < MOBILE_BREAKPOINT) return 0  // Mobile: flow layout
-  if (width < 1024) return 8   // Tablet: 8 columns
-  return 12  // Desktop: 12 columns
-}
 
 // Grid state
 let gridState = {
   cellSize: CELL_SIZE,
-  cols: 12,
+  cols: GRID_COLS,
   cards: [],  // [{id, x, y, w, h, el}, ...]
 }
 
@@ -57,7 +50,7 @@ function buildGridState() {
   const grid = document.getElementById('dashboard-cards')
   if (!grid) return
   
-  gridState.cols = getGridCols()
+  gridState.cols = GRID_COLS
   gridState.cards = []
   const cards = grid.querySelectorAll('.card')
   
@@ -390,10 +383,14 @@ function initCardResize() {
   })
 }
 
+// Track mobile state
+let wasMobile = false
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
+  wasMobile = isMobile()
   buildGridState()
-  if (!isMobile()) {
+  if (!wasMobile) {
     applyPositions()
   }
   initCardDrag()
@@ -402,18 +399,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Update on resize
 window.addEventListener('resize', () => {
-  const wasMobile = gridState.cols === 0
-  buildGridState()
-  const nowMobile = gridState.cols === 0
+  const nowMobile = isMobile()
   
-  // Only reposition if not mobile
-  if (!nowMobile) {
-    // If switching from mobile to desktop, recompact
-    if (wasMobile) {
-      compactCards()
-    }
+  // Switching from mobile to desktop - reapply positions
+  if (wasMobile && !nowMobile) {
+    buildGridState()
     applyPositions()
   }
+  
+  // Update grid height when not mobile
+  if (!nowMobile) {
+    updateGridHeight()
+  }
+  
+  wasMobile = nowMobile
 })
 
 // Generate a simple session ID

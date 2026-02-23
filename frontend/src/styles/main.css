@@ -244,7 +244,7 @@
 .dashboard-grid {
   position: relative;
   min-height: 400px;
-  padding: var(--grid-gap, 8px);
+  padding: 8px;
   /* Fixed cell size - no scaling */
   --cell-size: 70px;
   --grid-gap: 8px;
@@ -253,20 +253,6 @@
   width: calc(var(--grid-cols) * (var(--cell-size) + var(--grid-gap)));
   max-width: 100%;
   margin: 0 auto;
-}
-
-/* Desktop: 12 columns */
-@media (min-width: 1024px) {
-  .dashboard-grid {
-    --grid-cols: 12;
-  }
-}
-
-/* Tablet: 8 columns */
-@media (min-width: 768px) and (max-width: 1023px) {
-  .dashboard-grid {
-    --grid-cols: 8;
-  }
 }
 
 /* Mobile: flow layout (no absolute positioning) */
@@ -295,7 +281,7 @@
   }
 }
 
-/* Cards are absolutely positioned (desktop/tablet only) */
+/* Desktop: absolute positioning */
 @media (min-width: 768px) {
   .dashboard-grid .card {
     position: absolute;
