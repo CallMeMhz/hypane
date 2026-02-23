@@ -35,8 +35,10 @@ router = APIRouter(prefix="/api/panels", tags=["panels"])
 # === Request Models ===
 
 class CreatePanelRequest(BaseModel):
-    type: str
     title: str
+    desc: Optional[str] = None  # Natural language description for agent
+    icon: Optional[str] = "box"  # Lucide icon name
+    headerColor: Optional[str] = "gray"  # Color preset name
     facade: str  # HTML
     data: Optional[dict] = None
     handler: Optional[str] = None  # Python code
@@ -47,12 +49,14 @@ class CreatePanelRequest(BaseModel):
 
 class UpdatePanelRequest(BaseModel):
     title: Optional[str] = None
+    desc: Optional[str] = None
+    icon: Optional[str] = None
+    headerColor: Optional[str] = None
     facade: Optional[str] = None
     data: Optional[dict] = None
     handler: Optional[str] = None
     size: Optional[str] = None
     position: Optional[dict] = None
-    type: Optional[str] = None
 
 
 class PanelActionRequest(BaseModel):
@@ -72,14 +76,17 @@ async def list_panels_api():
 @router.post("")
 async def create_panel_api(request: CreatePanelRequest):
     """Create a new panel."""
-    # Prepare data
+    # Prepare data with icon, headerColor, desc
     panel_data = request.data or {}
+    panel_data["icon"] = request.icon or "box"
+    panel_data["headerColor"] = request.headerColor or "gray"
+    if request.desc:
+        panel_data["desc"] = request.desc
     if request.minSize:
         panel_data["minSize"] = request.minSize
     
     # Create panel
     panel_id = create_panel(
-        panel_type=request.type,
         title=request.title,
         facade_html=request.facade,
         data=panel_data,
@@ -94,7 +101,7 @@ async def create_panel_api(request: CreatePanelRequest):
     create_snapshot(
         dashboard,
         action="create",
-        details=f"Created {request.type} panel: {request.title}",
+        details=f"Created panel: {request.title}",
         card_id=panel_id,
     )
     
@@ -124,14 +131,19 @@ async def update_panel_api(panel_id: str, request: UpdatePanelRequest):
         raise HTTPException(status_code=404, detail="Panel not found")
     
     # Update data fields
-    if request.title is not None or request.data is not None or request.type is not None:
-        updates = {}
-        if request.title is not None:
-            updates["title"] = request.title
-        if request.type is not None:
-            updates["type"] = request.type
-        if request.data is not None:
-            updates.update(request.data)
+    updates = {}
+    if request.title is not None:
+        updates["title"] = request.title
+    if request.desc is not None:
+        updates["desc"] = request.desc
+    if request.icon is not None:
+        updates["icon"] = request.icon
+    if request.headerColor is not None:
+        updates["headerColor"] = request.headerColor
+    if request.data is not None:
+        updates.update(request.data)
+    
+    if updates:
         update_panel_data(panel_id, updates)
     
     # Update facade

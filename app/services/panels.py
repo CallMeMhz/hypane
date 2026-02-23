@@ -36,11 +36,11 @@ def list_panels() -> list[str]:
     return [d.name for d in PANELS_DIR.iterdir() if d.is_dir()]
 
 
-def generate_panel_id(panel_type: str) -> str:
+def generate_panel_id() -> str:
     """Generate a unique panel ID."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     short_uuid = uuid.uuid4().hex[:4]
-    return f"{panel_type}-{timestamp}-{short_uuid}"
+    return f"panel-{timestamp}-{short_uuid}"
 
 
 # === Data (data.json) ===
@@ -196,7 +196,6 @@ async def invoke_handler(panel_id: str, action: str, payload: dict) -> Optional[
 # === Panel CRUD ===
 
 def create_panel(
-    panel_type: str,
     title: str,
     facade_html: str,
     data: Optional[dict] = None,
@@ -210,7 +209,7 @@ def create_panel(
     ensure_panels_dir()
     
     if panel_id is None:
-        panel_id = generate_panel_id(panel_type)
+        panel_id = generate_panel_id()
     
     panel_dir = get_panel_dir(panel_id)
     panel_dir.mkdir(parents=True, exist_ok=True)
@@ -218,7 +217,6 @@ def create_panel(
     # Save data.json
     panel_data = data or {}
     panel_data["id"] = panel_id
-    panel_data["type"] = panel_type
     panel_data["title"] = title
     panel_data["createdAt"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     save_panel_data(panel_id, panel_data)

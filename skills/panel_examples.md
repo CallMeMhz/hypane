@@ -10,6 +10,58 @@
 4. 交互功能用 Alpine.js (`x-data`, `x-init`, 等)
 5. 通过 `data.minSize` 指定最小尺寸，如 `"3x2"`
 6. **Panel ID 占位符**：facade.html 中需要引用 panel ID 时，使用 `__PANEL_ID__`，系统会自动替换为实际 ID
+7. **不要在 title 里使用 emoji**
+8. **icon** 和 **headerColor** 必须在创建时指定
+9. **desc** 用自然语言描述 panel 功能，帮助 agent 理解
+
+## 元数据字段
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `title` | ✓ | 显示标题 |
+| `desc` | | 自然语言描述，如 "追踪每日待办事项和任务完成情况" |
+| `icon` | ✓ | Lucide 图标名 |
+| `headerColor` | ✓ | 颜色预设名 |
+
+## 标题颜色预设
+
+深邃低调的终端风格配色：
+
+| 颜色名 | 色值 |
+|--------|------|
+| `gray` | #6b7280 |
+| `red` | #b45b5b |
+| `orange` | #b87333 |
+| `amber` | #a68a4c |
+| `green` | #5b8a5b |
+| `teal` | #4a8a8a |
+| `cyan` | #5b8a9a |
+| `blue` | #5b7b9a |
+| `indigo` | #6b6b9a |
+| `purple` | #7a5b8a |
+| `pink` | #8a5b7a |
+| `rose` | #9a5b6b |
+
+## 图标列表 (Lucide outline)
+
+常用图标：
+- `check-square` - 待办/任务
+- `list-checks` - 清单
+- `file-text` - 笔记
+- `hourglass` - 倒计时
+- `timer` / `clock` - 计时器
+- `bell` / `bell-ring` - 提醒
+- `calendar` - 日历
+- `cloud-sun` - 天气
+- `coins` / `bitcoin` - 加密货币
+- `trending-up` / `bar-chart-2` - 图表
+- `newspaper` / `rss` - 新闻
+- `cookie` / `gamepad-2` - 游戏
+- `star` / `heart` / `zap` - 收藏/喜欢
+- `bookmark` / `folder` - 书签/文件夹
+- `code` / `terminal` / `cpu` - 开发
+- `globe` / `link` - 链接
+- `box` - 通用/默认
 
 ## API
 

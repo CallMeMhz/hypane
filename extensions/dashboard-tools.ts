@@ -33,7 +33,8 @@ export default function (pi: ExtensionAPI) {
           .map((p: any) => {
             const pos = p.position || {};
             const posStr = pos.x !== undefined ? `@(${pos.x},${pos.y})` : '';
-            return `- [${p.id}] ${p.type} ${p.size || '3x2'} ${posStr}: ${p.title || "(no title)"}`;
+            const desc = p.desc ? ` - ${p.desc}` : '';
+            return `- [${p.id}] ${p.size || '3x2'} ${posStr}: ${p.title || "(no title)"}${desc}`;
           })
           .join("\n");
 
@@ -81,16 +82,21 @@ export default function (pi: ExtensionAPI) {
 
 Each panel has:
 - facade: HTML content (Tailwind CSS + Alpine.js)
-- data: JSON data (metadata, state)
+- data: JSON data (includes icon, headerColor, desc, etc.)
 - handler: Python code (optional, for backend logic)
 
 Size format: "WxH" (e.g., "3x2", "4x3"). Each unit is 70px.
 Use __PANEL_ID__ placeholder in facade - it will be replaced with actual ID.
 
-See skills/panel_examples.md for common patterns.`,
+Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink, rose
+Icons: check-square, hourglass, bell, calendar, cloud-sun, coins, newspaper, cookie, star, heart, code, box, etc.
+
+See skills/panel_examples.md for full list.`,
     parameters: Type.Object({
-      type: Type.String({ description: "Panel type (e.g. todo, weather, game)" }),
-      title: Type.String({ description: "Panel title" }),
+      title: Type.String({ description: "Panel title (no emoji)" }),
+      desc: Type.Optional(Type.String({ description: "Natural language description of what this panel does (helps agent understand)" })),
+      icon: Type.String({ description: "Icon name (e.g. check-square, bell, newspaper)" }),
+      headerColor: Type.String({ description: "Color name (e.g. teal, amber, indigo)" }),
       facade: Type.String({ description: "HTML content (Tailwind CSS + Alpine.js)" }),
       data: Type.Optional(Type.Object({}, { additionalProperties: true })),
       handler: Type.Optional(Type.String({ description: "Python handler code" })),

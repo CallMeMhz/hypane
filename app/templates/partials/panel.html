@@ -11,6 +11,7 @@
 {% set pos_x = pos.x if pos.x is defined else 0 %}
 {% set pos_y = pos.y if pos.y is defined else 0 %}
 {% set min_size = panel.minSize or '2x2' %}
+{% set header_color = panel.headerColor or 'gray' %}
 
 <div 
   id="panel-{{ panel.id }}"
@@ -28,23 +29,19 @@
   <!-- Panel Header -->
   <div class="flex items-center justify-between mb-3 group/header">
     <div class="flex items-center gap-2 relative">
-      <!-- Drag handle -->
-      <div class="card-drag-handle cursor-grab opacity-0 group-hover/header:opacity-100 transition-opacity duration-200"
-           style="color: var(--kb-text-ghost);"
+      <!-- Panel Icon (also drag handle) -->
+      <div class="card-drag-handle cursor-grab flex items-center justify-center w-5 h-5 rounded transition-opacity duration-200"
+           style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};"
            title="Drag to move">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="9" cy="6" r="1.5"/>
-          <circle cx="15" cy="6" r="1.5"/>
-          <circle cx="9" cy="12" r="1.5"/>
-          <circle cx="15" cy="12" r="1.5"/>
-          <circle cx="9" cy="18" r="1.5"/>
-          <circle cx="15" cy="18" r="1.5"/>
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          {{ panel.iconSvg | safe }}
         </svg>
       </div>
-      <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">{{ panel.title }}</h3>
+      <!-- Title -->
+      <h3 class="text-sm font-medium" style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};">{{ panel.title }}</h3>
       <!-- Magic wand button -->
       <button 
-        class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 delay-500 p-1 rounded"
+        class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1 rounded"
         style="color: var(--kb-text-ghost);"
         onmouseover="this.style.color='var(--kb-text-muted)'; this.style.backgroundColor='var(--kb-bg-tertiary)';"
         onmouseout="this.style.color='var(--kb-text-ghost)'; this.style.backgroundColor='transparent';"

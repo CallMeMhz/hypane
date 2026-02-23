@@ -45,10 +45,11 @@ def get_system_context() -> str:
         lines.append(f"\nDashboard ({len(panels)} panels):")
         for i, panel in enumerate(panels):
             panel_id = panel.get("id", "?")
-            panel_type = panel.get("type", "?")
             panel_title = panel.get("title", "(no title)")
             panel_size = panel.get("size", "3x2")
-            lines.append(f"  {i+1}. [{panel_id}] {panel_type} - {panel_title} ({panel_size})")
+            panel_desc = panel.get("desc", "")
+            desc_str = f" - {panel_desc}" if panel_desc else ""
+            lines.append(f"  {i+1}. [{panel_id}] {panel_title} ({panel_size}){desc_str}")
     else:
         lines.append("\nDashboard: empty (no panels)")
     
