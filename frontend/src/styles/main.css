@@ -257,6 +257,16 @@
   margin: 0;
   box-sizing: border-box;
   transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
+  /* Preserve card styling */
+  background-color: var(--kb-bg-secondary);
+  border: 1px solid var(--kb-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.dashboard-grid .card:hover {
+  border-color: var(--kb-bg-hover);
 }
 
 /* Size uses cell + gap for multi-cell tiles */
