@@ -421,7 +421,7 @@ function generateSessionId() {
 }
 
 // Insert card reference to chat input (with rendered HTML for debug)
-window.insertCardToChat = function(cardId) {
+window.insertCardToChat = async function(cardId) {
   const chatBoxEl = document.querySelector('[x-data="chatBox"]')
   if (!chatBoxEl) return
   
@@ -438,11 +438,22 @@ window.insertCardToChat = function(cardId) {
   const contentEl = cardEl.querySelector('.card-content')
   const renderedHtml = contentEl ? contentEl.innerHTML.trim() : ''
   
+  // Fetch original card data from API
+  let cardData = null
+  try {
+    const res = await fetch(`/api/cards/${cardId}`)
+    if (res.ok) {
+      cardData = await res.json()
+    }
+  } catch (e) {
+    console.error('Failed to fetch card data:', e)
+  }
+  
   // Expand chat panel
   chatBox.expanded = true
   
-  // Add card reference with HTML
-  chatBox.addCardRef(cardId, title, renderedHtml)
+  // Add card reference with HTML and data
+  chatBox.addCardRef(cardId, title, renderedHtml, cardData)
 }
 
 // Alpine components
@@ -455,10 +466,10 @@ Alpine.data('chatBox', () => ({
   sessionId: generateSessionId(), // Unique session for this browser tab
   abortController: null, // For stopping requests
 
-  addCardRef(cardId, cardTitle, renderedHtml = '') {
+  addCardRef(cardId, cardTitle, renderedHtml = '', cardData = null) {
     // Avoid duplicates
     if (!this.cardRefs.find(c => c.id === cardId)) {
-      this.cardRefs.push({ id: cardId, title: cardTitle, html: renderedHtml })
+      this.cardRefs.push({ id: cardId, title: cardTitle, html: renderedHtml, data: cardData })
     }
     // Focus input and expand
     this.expanded = true
@@ -506,14 +517,21 @@ Alpine.data('chatBox', () => ({
     const text = this.getInputText()
     if ((!text && this.cardRefs.length === 0) || this.loading) return
 
-    // Build message with card references (include rendered HTML for agent debugging)
+    // Build message with card references (include both data and rendered HTML)
     let userMessage = ''
     if (this.cardRefs.length > 0) {
       const refs = this.cardRefs.map(c => {
-        // Format: [title](id) with HTML context
         let ref = `[${c.title}](${c.id})`
+        
+        // Add original card data (JSON)
+        if (c.data) {
+          const dataJson = JSON.stringify(c.data, null, 2)
+          const truncatedData = dataJson.length > 3000 ? dataJson.slice(0, 3000) + '\n...' : dataJson
+          ref += `\n<card-data id="${c.id}">\n${truncatedData}\n</card-data>`
+        }
+        
+        // Add rendered HTML for visual debugging
         if (c.html) {
-          // Add rendered HTML as context (truncate if too long)
           const truncatedHtml = c.html.length > 2000 ? c.html.slice(0, 2000) + '...' : c.html
           ref += `\n<card-html id="${c.id}">\n${truncatedHtml}\n</card-html>`
         }
