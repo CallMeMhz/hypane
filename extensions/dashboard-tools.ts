@@ -81,27 +81,24 @@ export default function (pi: ExtensionAPI) {
     name: "dashboard_create_card",
     label: "Create Dashboard Card",
     description: `Create a new card on the dashboard.
-    
-Types: weather, todo, countdown, reminder, news-bundle, crypto-bundle, or custom (use content.html).
 
-Size format: "WxH" where W=columns(1-12), H=rows(1-8). Each unit is 80px.
-Examples: "3x2" (240×160px), "4x3" (320×240px), "6x2" (wide), "3x4" (tall)
+All cards are custom - use content.html to render HTML content (Tailwind CSS + Alpine.js supported).
+See skills/card_examples.md for common card patterns (weather, todo, countdown, games, etc).
 
-Minimum sizes per type (cannot go smaller):
-- weather: 3x2
-- todo, crypto, reminder, countdown: 2x2
-- news-single: 3x2
-- news-bundle: 4x3
-- crypto-bundle: 3x3
-- chat: 4x3
+Size format: "WxH" where W=columns(1-12), H=rows(1-8). Each unit is 70px.
+Examples: "3x2", "4x3", "6x2" (wide), "3x4" (tall)
 
-Position format: {x, y} grid coordinates. {x:0, y:0} is top-left.
-Cards can overlap like sticky notes on a board.`,
+Use content.minSize to set minimum resize limit, e.g. "3x2". Default is "2x2".
+
+Position format: {x, y} grid coordinates. {x:0, y:0} is top-left.`,
     parameters: Type.Object({
-      type: Type.String({ description: "Card type" }),
+      type: Type.String({ description: "Card type identifier (e.g. weather, todo, game)" }),
       title: Type.String({ description: "Card title" }),
-      content: Type.Any({ description: "Card content (type-specific)" }),
-      size: Type.Optional(Type.String({ description: 'Grid size "WxH", e.g. "3x2", "4x3", "6x2"' })),
+      content: Type.Object({
+        html: Type.String({ description: "HTML content (Tailwind CSS + Alpine.js)" }),
+        minSize: Type.Optional(Type.String({ description: 'Minimum size "WxH", e.g. "3x2"' })),
+      }),
+      size: Type.Optional(Type.String({ description: 'Grid size "WxH", e.g. "3x2", "4x3"' })),
       position: Type.Optional(Type.Object({
         x: Type.Number({ description: "Column position (0-indexed)" }),
         y: Type.Number({ description: "Row position (0-indexed)" }),

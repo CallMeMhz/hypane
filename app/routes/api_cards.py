@@ -59,31 +59,15 @@ async def get_card(card_id: str):
     raise HTTPException(status_code=404, detail="Card not found")
 
 
-# Default minimum sizes per card type
-DEFAULT_MIN_SIZES = {
-    'weather': (3, 2),
-    'todo': (2, 2),
-    'news-single': (3, 2),
-    'news-bundle': (4, 3),
-    'crypto': (2, 2),
-    'crypto-bundle': (3, 3),
-    'reminder': (2, 2),
-    'countdown': (2, 2),
-    'chat': (4, 3),
-}
-
 def enforce_min_size(card_type: str, size: str, content: dict = None) -> str:
-    """Ensure size meets minimum for card type. Card can override via content.minSize."""
-    # Check card's own minSize first
+    """Ensure size meets minimum. Card specifies minSize via content.minSize, default is 2x2."""
+    # Get minSize from card content, default 2x2
+    min_w, min_h = 2, 2
     if content and isinstance(content, dict) and content.get('minSize'):
         min_size_str = content['minSize']
         if 'x' in min_size_str:
             parts = min_size_str.split('x')
             min_w, min_h = int(parts[0]), int(parts[1])
-        else:
-            min_w, min_h = 2, 2
-    else:
-        min_w, min_h = DEFAULT_MIN_SIZES.get(card_type, (2, 2))
     
     if 'x' in size:
         parts = size.split('x')

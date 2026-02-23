@@ -1,32 +1,17 @@
-<!-- Card Partial - renders a single card based on type -->
+<!-- Card Partial - renders a single card -->
 {% set grid_size = card.size or '3x2' %}
 {% if 'x' in grid_size %}
   {% set w = grid_size.split('x')[0] %}
   {% set h = grid_size.split('x')[1] %}
   {% set size_class = 'w' ~ w ~ ' h' ~ h %}
 {% else %}
-  {# Legacy size format #}
   {% set size_class = 'card-' ~ grid_size %}
 {% endif %}
 {% set pos = card.position or {} %}
 {% set pos_x = pos.x if pos.x is defined else 0 %}
 {% set pos_y = pos.y if pos.y is defined else 0 %}
-{# Minimum sizes per card type - card can override via content.minSize #}
-{% set default_min_sizes = {
-  'weather': '3x2',
-  'todo': '2x2',
-  'news-single': '3x2',
-  'news-bundle': '4x3',
-  'crypto': '2x2',
-  'crypto-bundle': '3x3',
-  'reminder': '2x2',
-  'countdown': '2x2',
-  'chat': '4x3'
-} %}
-{% set min_size = card.content.minSize if card.content is mapping and card.content.minSize else (default_min_sizes[card.type] if card.type in default_min_sizes else '2x2') %}
-{% set pos = card.position or {} %}
-{% set pos_x = pos.x if pos.x is defined else 0 %}
-{% set pos_y = pos.y if pos.y is defined else 0 %}
+{% set min_size = card.content.minSize if card.content is mapping and card.content.minSize else '2x2' %}
+
 <div 
   id="card-{{ card.id }}"
   class="card {{ size_class }}"
@@ -45,7 +30,7 @@
       <!-- Drag handle -->
       <div class="card-drag-handle cursor-grab opacity-0 group-hover/header:opacity-100 transition-opacity duration-200"
            style="color: var(--kb-text-ghost);"
-           title="Drag to reorder">
+           title="Drag to move">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
           <circle cx="9" cy="6" r="1.5"/>
           <circle cx="15" cy="6" r="1.5"/>
@@ -55,14 +40,8 @@
           <circle cx="15" cy="18" r="1.5"/>
         </svg>
       </div>
-      {% if card.titleColor %}
-        <h3 class="text-sm font-medium" style="color: {{ card.titleColor }}">{{ card.title }}</h3>
-      {% elif card.titleClass %}
-        <h3 class="text-sm font-medium {{ card.titleClass }}">{{ card.title }}</h3>
-      {% else %}
-        <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">{{ card.title }}</h3>
-      {% endif %}
-      <!-- Magic wand button - appears on hover after delay -->
+      <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">{{ card.title }}</h3>
+      <!-- Magic wand button -->
       <button 
         class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 delay-500 p-1 rounded"
         style="color: var(--kb-text-ghost);"
@@ -71,66 +50,25 @@
         onclick="insertCardToChat('{{ card.id }}')"
         title="Add to chat"
       >
-        <!-- Lucide Sparkles icon -->
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-          <path d="M20 3v4"/>
-          <path d="M22 5h-4"/>
-          <path d="M4 17v2"/>
-          <path d="M5 18H3"/>
+          <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
         </svg>
       </button>
     </div>
   </div>
 
-  <!-- Card Content by Type (rendered HTML captured for debug) -->
+  <!-- Card Content -->
   <div class="card-content" data-card-id="{{ card.id }}">
-  {% if card.type == 'weather' %}
-    {% include "components/weather.html" %}
-  {% elif card.type == 'todo' %}
-    {% include "components/todo.html" %}
-  {% elif card.type == 'news-single' %}
-    {% include "components/news.html" %}
-  {% elif card.type == 'news-bundle' %}
-    {% include "components/news_bundle.html" %}
-  {% elif card.type == 'crypto' %}
-    {% include "components/crypto.html" %}
-  {% elif card.type == 'crypto-bundle' %}
-    {% include "components/crypto_bundle.html" %}
-  {% elif card.type == 'reminder' %}
-    {% include "components/reminder.html" %}
-  {% elif card.type == 'countdown' %}
-    {% include "components/countdown.html" %}
-  {% else %}
-    <!-- Custom content: check for HTML or render as JSON -->
-    {% if card.content.html %}
-      <div class="custom-html-content" data-card-id="{{ card.id }}">
-        {{ card.content.html | safe }}
-        <script>
-          // Inject card API helper for custom HTML cards
-          (function() {
-            const cardId = '{{ card.id }}';
-            const container = document.querySelector('[data-card-id="{{ card.id }}"]');
-            if (container) {
-              container.cardAction = async function(action, payload) {
-                const res = await fetch(`/api/cards/${cardId}/action`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action, payload })
-                });
-                return res.json();
-              };
-              container.cardId = cardId;
-            }
-          })();
-        </script>
-      </div>
-    {% else %}
+    {% if card.content is mapping and card.content.html %}
+      {{ card.content.html | safe }}
+    {% elif card.content is mapping %}
       <div class="text-sm" style="color: var(--kb-text-muted);">
         <pre class="whitespace-pre-wrap">{{ card.content | tojson(indent=2) }}</pre>
       </div>
+    {% else %}
+      <div class="text-sm" style="color: var(--kb-text-muted);">{{ card.content }}</div>
     {% endif %}
-  {% endif %}
   </div>
 
   <!-- Resize handle -->
