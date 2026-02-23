@@ -438,10 +438,8 @@ window.insertCardToChat = function(cardId) {
   const contentEl = cardEl.querySelector('.card-content')
   const renderedHtml = contentEl ? contentEl.innerHTML.trim() : ''
   
-  // Open chat if not open
-  if (!chatBox.open) {
-    chatBox.open = true
-  }
+  // Expand chat panel
+  chatBox.expanded = true
   
   // Add card reference with HTML
   chatBox.addCardRef(cardId, title, renderedHtml)
@@ -449,7 +447,7 @@ window.insertCardToChat = function(cardId) {
 
 // Alpine components
 Alpine.data('chatBox', () => ({
-  open: false,
+  expanded: false,
   messages: [],
   loading: false,
   currentMessageIndex: -1,
@@ -457,16 +455,13 @@ Alpine.data('chatBox', () => ({
   sessionId: generateSessionId(), // Unique session for this browser tab
   abortController: null, // For stopping requests
 
-  toggle() {
-    this.open = !this.open
-  },
-
   addCardRef(cardId, cardTitle, renderedHtml = '') {
     // Avoid duplicates
     if (!this.cardRefs.find(c => c.id === cardId)) {
       this.cardRefs.push({ id: cardId, title: cardTitle, html: renderedHtml })
     }
-    // Focus input after a short delay
+    // Focus input and expand
+    this.expanded = true
     setTimeout(() => {
       const input = this.$refs.messageInput
       if (input) input.focus()
