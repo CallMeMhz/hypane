@@ -243,21 +243,70 @@
 /* Dashboard grid - Microsoft-style tile grid */
 .dashboard-grid {
   position: relative;
-  width: 100%;
   min-height: 400px;
   padding: var(--grid-gap, 8px);
-  /* CSS variables set by JS */
+  /* Fixed cell size - no scaling */
   --cell-size: 70px;
   --grid-gap: 8px;
+  --grid-cols: 12;
+  /* Center the grid content */
+  width: calc(var(--grid-cols) * (var(--cell-size) + var(--grid-gap)));
+  max-width: 100%;
+  margin: 0 auto;
 }
 
-/* Cards are absolutely positioned */
+/* Desktop: 12 columns */
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    --grid-cols: 12;
+  }
+}
+
+/* Tablet: 8 columns */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .dashboard-grid {
+    --grid-cols: 8;
+  }
+}
+
+/* Mobile: flow layout (no absolute positioning) */
+@media (max-width: 767px) {
+  .dashboard-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .dashboard-grid .card {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 120px;
+  }
+  
+  /* Hide drag and resize handles on mobile */
+  .dashboard-grid .card-drag-handle,
+  .dashboard-grid .card-resize-handle {
+    display: none !important;
+  }
+}
+
+/* Cards are absolutely positioned (desktop/tablet only) */
+@media (min-width: 768px) {
+  .dashboard-grid .card {
+    position: absolute;
+    margin: 0;
+    box-sizing: border-box;
+    transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
+  }
+}
+
+/* Card base styling */
 .dashboard-grid .card {
-  position: absolute;
-  margin: 0;
-  box-sizing: border-box;
-  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
-  /* Preserve card styling */
   background-color: var(--kb-bg-secondary);
   border: 1px solid var(--kb-border);
   border-radius: 0.5rem;

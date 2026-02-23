@@ -28,38 +28,28 @@ window.renderMarkdown = function(text) {
 // Microsoft-style Tile Grid System
 // ============================================
 
-const GRID_COLS = 12
-const GRID_GAP = 8  // Microsoft uses 8px gap
-const BASE_UNIT = 70  // Microsoft base unit
+const CELL_SIZE = 70  // Fixed cell size (no scaling)
+const GRID_GAP = 8    // Microsoft uses 8px gap
+const MOBILE_BREAKPOINT = 768
 
-// Standard tile sizes (in grid units)
-const TILE_SIZES = {
-  small: { w: 1, h: 1 },   // 70x70
-  medium: { w: 2, h: 2 },  // 150x150
-  wide: { w: 4, h: 2 },    // 310x150
-  large: { w: 4, h: 4 },   // 310x310
+// Get current grid columns based on viewport
+function getGridCols() {
+  const width = window.innerWidth
+  if (width < MOBILE_BREAKPOINT) return 0  // Mobile: flow layout
+  if (width < 1024) return 8   // Tablet: 8 columns
+  return 12  // Desktop: 12 columns
 }
 
 // Grid state
 let gridState = {
-  cellSize: BASE_UNIT,
+  cellSize: CELL_SIZE,
+  cols: 12,
   cards: [],  // [{id, x, y, w, h, el}, ...]
 }
 
-// Calculate cell size based on container
-function updateGridCellSize() {
-  const grid = document.getElementById('dashboard-cards')
-  if (!grid) return BASE_UNIT
-  
-  const containerWidth = grid.offsetWidth
-  // Fit 12 columns with gaps
-  let cellSize = (containerWidth - GRID_GAP * (GRID_COLS + 1)) / GRID_COLS
-  cellSize = Math.max(50, Math.min(BASE_UNIT, cellSize))
-  
-  grid.style.setProperty('--cell-size', cellSize + 'px')
-  grid.style.setProperty('--grid-gap', GRID_GAP + 'px')
-  gridState.cellSize = cellSize
-  return cellSize
+// Check if mobile mode
+function isMobile() {
+  return window.innerWidth < MOBILE_BREAKPOINT
 }
 
 // Build grid state from DOM
@@ -67,6 +57,7 @@ function buildGridState() {
   const grid = document.getElementById('dashboard-cards')
   if (!grid) return
   
+  gridState.cols = getGridCols()
   gridState.cards = []
   const cards = grid.querySelectorAll('.card')
   
@@ -102,8 +93,9 @@ function checkOverlap(x, y, w, h, excludeId) {
 
 // Find first available position for a card (flow layout)
 function findAvailablePosition(w, h, excludeId) {
+  const cols = gridState.cols || 12
   for (let y = 0; y < 100; y++) {
-    for (let x = 0; x <= GRID_COLS - w; x++) {
+    for (let x = 0; x <= cols - w; x++) {
       if (!checkOverlap(x, y, w, h, excludeId)) {
         return { x, y }
       }
@@ -114,6 +106,8 @@ function findAvailablePosition(w, h, excludeId) {
 
 // Compact all cards - reflow to fill gaps (like Windows Start)
 function compactCards(excludeId = null) {
+  const cols = gridState.cols || 12
+  
   // Sort cards by original position (top-left to bottom-right)
   const cardsToPlace = gridState.cards
     .filter(c => c.id !== excludeId)
@@ -130,14 +124,17 @@ function compactCards(excludeId = null) {
   for (const card of cardsToPlace) {
     let placed = false
     
+    // Clamp width to available columns
+    const cardW = Math.min(card.w, cols)
+    
     // Try to find a spot from top-left
     for (let y = 0; y < 100 && !placed; y++) {
-      for (let x = 0; x <= GRID_COLS - card.w && !placed; x++) {
+      for (let x = 0; x <= cols - cardW && !placed; x++) {
         // Check overlap with already placed cards
         let overlaps = false
         for (const placed of placedCards) {
           if (x < placed.x + placed.w &&
-              x + card.w > placed.x &&
+              x + cardW > placed.x &&
               y < placed.y + placed.h &&
               y + card.h > placed.y) {
             overlaps = true
@@ -205,6 +202,9 @@ function initCardDrag() {
   let dragPlaceholder = null
   
   document.addEventListener('mousedown', (e) => {
+    // Skip on mobile
+    if (isMobile()) return
+    
     const handle = e.target.closest('.card-drag-handle')
     if (!handle) return
     
@@ -218,7 +218,8 @@ function initCardDrag() {
     if (!cardState) return
     
     dragCard = cardState
-    const cellSize = updateGridCellSize()
+    const cellSize = CELL_SIZE
+    const cols = gridState.cols
     const startX = e.clientX
     const startY = e.clientY
     const startGridX = cardState.x
@@ -254,9 +255,10 @@ function initCardDrag() {
       card.style.top = `calc(${startGridY} * (var(--cell-size) + var(--grid-gap)) + ${deltaY}px)`
       
       // Calculate snapped grid position
+      const cardW = Math.min(cardState.w, cols)
       let newX = startGridX + Math.round(deltaX / (cellSize + GRID_GAP))
       let newY = startGridY + Math.round(deltaY / (cellSize + GRID_GAP))
-      newX = Math.max(0, Math.min(GRID_COLS - cardState.w, newX))
+      newX = Math.max(0, Math.min(cols - cardW, newX))
       newY = Math.max(0, newY)
       
       // Update placeholder position
@@ -304,6 +306,9 @@ function initCardDrag() {
 // Card resize functionality
 function initCardResize() {
   document.addEventListener('mousedown', (e) => {
+    // Skip on mobile
+    if (isMobile()) return
+    
     const handle = e.target.closest('.card-resize-handle')
     if (!handle) return
     
@@ -317,7 +322,8 @@ function initCardResize() {
     const cardState = gridState.cards.find(c => c.id === card.id)
     if (!cardState) return
     
-    const cellSize = updateGridCellSize()
+    const cellSize = CELL_SIZE
+    const cols = gridState.cols
     const startX = e.clientX
     const startY = e.clientY
     const startW = cardState.w
@@ -349,7 +355,7 @@ function initCardResize() {
       let newW = startW + Math.round(deltaX / (cellSize + GRID_GAP))
       let newH = startH + Math.round(deltaY / (cellSize + GRID_GAP))
       
-      newW = Math.max(minW, Math.min(GRID_COLS - cardState.x, newW))
+      newW = Math.max(minW, Math.min(cols - cardState.x, newW))
       newH = Math.max(minH, Math.min(8, newH))
       
       if (newW !== cardState.w || newH !== cardState.h) {
@@ -386,18 +392,28 @@ function initCardResize() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-  updateGridCellSize()
   buildGridState()
-  applyPositions()
+  if (!isMobile()) {
+    applyPositions()
+  }
   initCardDrag()
   initCardResize()
 })
 
 // Update on resize
 window.addEventListener('resize', () => {
-  updateGridCellSize()
+  const wasMobile = gridState.cols === 0
   buildGridState()
-  applyPositions()
+  const nowMobile = gridState.cols === 0
+  
+  // Only reposition if not mobile
+  if (!nowMobile) {
+    // If switching from mobile to desktop, recompact
+    if (wasMobile) {
+      compactCards()
+    }
+    applyPositions()
+  }
 })
 
 // Generate a simple session ID
