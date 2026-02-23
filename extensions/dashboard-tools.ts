@@ -83,7 +83,21 @@ export default function (pi: ExtensionAPI) {
 Each panel has:
 - facade: HTML content (Tailwind CSS + Alpine.js)
 - data: JSON data (includes icon, headerColor, desc, etc.)
-- handler: Python code (optional, for backend logic)
+- handler: Python code (optional, for action and/or scheduled tasks)
+
+Handler example with scheduled task:
+\`\`\`python
+from scheduler.decorators import scheduled
+
+@scheduled("*/30 * * * *")  # every 30 min
+async def collect(data: dict) -> dict:
+    # fetch data, update panel
+    return data
+
+async def handle_action(action: str, payload: dict, data: dict) -> dict:
+    # handle user interaction
+    return data
+\`\`\`
 
 Size format: "WxH" (e.g., "3x2", "4x3"). Each unit is 70px.
 Use __PANEL_ID__ placeholder in facade - it will be replaced with actual ID.
@@ -91,7 +105,7 @@ Use __PANEL_ID__ placeholder in facade - it will be replaced with actual ID.
 Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink, rose
 Icons: check-square, hourglass, bell, calendar, cloud-sun, coins, newspaper, cookie, star, heart, code, box, etc.
 
-See skills/panel_examples.md for full list.`,
+See skills/panel_examples.md for full list and examples.`,
     parameters: Type.Object({
       title: Type.String({ description: "Panel title (no emoji)" }),
       desc: Type.Optional(Type.String({ description: "Natural language description of what this panel does (helps agent understand)" })),
@@ -99,7 +113,7 @@ See skills/panel_examples.md for full list.`,
       headerColor: Type.String({ description: "Color name (e.g. teal, amber, indigo)" }),
       facade: Type.String({ description: "HTML content (Tailwind CSS + Alpine.js)" }),
       data: Type.Optional(Type.Object({}, { additionalProperties: true })),
-      handler: Type.Optional(Type.String({ description: "Python handler code" })),
+      handler: Type.Optional(Type.String({ description: "Python handler code with @scheduled decorator and/or handle_action()" })),
       size: Type.Optional(Type.String({ description: 'Grid size "WxH", default "3x2"' })),
       minSize: Type.Optional(Type.String({ description: 'Minimum size "WxH"' })),
       position: Type.Optional(Type.Object({

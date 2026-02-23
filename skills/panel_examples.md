@@ -1,31 +1,53 @@
 # Panel 示例
 
-所有 panel 都通过 `facade.html` 渲染外观，`data.json` 存储数据，可选 `handler.py` 处理后端逻辑。
+每个 Panel 是一个独立目录：
+- `facade.html` - 前端渲染（Tailwind + Alpine.js）
+- `data.json` - 数据和配置
+- `handler.py` - 后端逻辑（可选）
 
-## 通用规则
+## Handler 模式
 
-1. 使用 Tailwind CSS
-2. 深色模式用 `dark:` 前缀
-3. 颜色用 `gray-*` 系列保持简洁
-4. 交互功能用 Alpine.js (`x-data`, `x-init`, 等)
-5. 通过 `data.minSize` 指定最小尺寸，如 `"3x2"`
-6. **Panel ID 占位符**：facade.html 中需要引用 panel ID 时，使用 `__PANEL_ID__`，系统会自动替换为实际 ID
-7. **不要在 title 里使用 emoji**
-8. **icon** 和 **headerColor** 必须在创建时指定
-9. **desc** 用自然语言描述 panel 功能，帮助 agent 理解
+handler.py 支持两种触发：
+
+```python
+# HTTP 触发（用户交互）
+async def handle_action(action: str, payload: dict, data: dict) -> dict:
+    """处理用户操作，返回更新后的 data"""
+    if action == "click":
+        data["count"] = data.get("count", 0) + 1
+    return data
+
+# 定时触发（使用装饰器）
+from scheduler.decorators import scheduled
+
+@scheduled("*/30 * * * *")  # 每30分钟
+async def collect(data: dict) -> dict:
+    """定时采集数据，返回更新后的 data"""
+    result = await fetch_external_data()
+    data["lastValue"] = result
+    return data
+```
+
+常用 cron 表达式：
+- `*/5 * * * *` - 每 5 分钟
+- `*/30 * * * *` - 每 30 分钟
+- `0 * * * *` - 每小时
+- `0 */6 * * *` - 每 6 小时
+- `0 9 * * *` - 每天 9:00
+- `0 9 * * 1` - 每周一 9:00
 
 ## 元数据字段
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `title` | ✓ | 显示标题 |
-| `desc` | | 自然语言描述，如 "追踪每日待办事项和任务完成情况" |
+| `desc` | | 自然语言描述 |
 | `icon` | ✓ | Lucide 图标名 |
 | `headerColor` | ✓ | 颜色预设名 |
+| `schedule` | | Cron 表达式（启用定时采集） |
+| `minSize` | | 最小尺寸，如 `"3x2"` |
 
 ## 标题颜色预设
-
-深邃低调的终端风格配色：
 
 | 颜色名 | 色值 |
 |--------|------|
@@ -42,228 +64,218 @@
 | `pink` | #8a5b7a |
 | `rose` | #9a5b6b |
 
-## 图标列表 (Lucide outline)
+## 图标列表 (Lucide)
 
-常用图标：
-- `check-square` - 待办/任务
-- `list-checks` - 清单
-- `file-text` - 笔记
+- `check-square` - 待办
 - `hourglass` - 倒计时
-- `timer` / `clock` - 计时器
-- `bell` / `bell-ring` - 提醒
+- `bell` - 提醒
 - `calendar` - 日历
 - `cloud-sun` - 天气
-- `coins` / `bitcoin` - 加密货币
-- `trending-up` / `bar-chart-2` - 图表
-- `newspaper` / `rss` - 新闻
-- `cookie` / `gamepad-2` - 游戏
-- `star` / `heart` / `zap` - 收藏/喜欢
-- `bookmark` / `folder` - 书签/文件夹
-- `code` / `terminal` / `cpu` - 开发
-- `globe` / `link` - 链接
-- `box` - 通用/默认
+- `coins` - 加密货币
+- `newspaper` - 新闻
+- `cookie` - 游戏
+- `code` / `terminal` - 开发
+- `box` - 默认
 
 ## API
 
-- `GET /api/panels/{id}/data` - 获取 panel 数据
-- `PATCH /api/panels/{id}/data` - 更新 panel 数据（合并）
-- `POST /api/panels/{id}/action` - 调用 handler (需要 handler.py)
+- `GET /api/panels/{id}/data` - 获取数据
+- `PATCH /api/panels/{id}/data` - 更新数据
+- `POST /api/panels/{id}/action` - 调用 handle_action
 
 ---
 
-## 天气卡片
+## 示例 1: 天气面板（带定时采集）
 
-**minSize**: `3x2`
+**创建参数：**
+```json
+{
+  "title": "天气",
+  "desc": "显示实时天气，每30分钟自动更新",
+  "icon": "cloud-sun",
+  "headerColor": "cyan",
+  "size": "3x3",
+  "data": {
+    "location": "Singapore"
+  }
+}
+```
 
+**handler.py:**
+```python
+import httpx
+from scheduler.decorators import scheduled
+
+@scheduled("*/30 * * * *")
+async def collect(data: dict) -> dict:
+    location = data.get("location", "Singapore")
+    url = f"https://wttr.in/{location}?format=j1"
+    
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url, timeout=10)
+        weather = res.json()
+    
+    current = weather["current_condition"][0]
+    data["temperature"] = int(current["temp_C"])
+    data["condition"] = current["weatherDesc"][0]["value"]
+    data["humidity"] = int(current["humidity"])
+    return data
+```
+
+**facade.html:**
 ```html
-<div class="flex items-center gap-4">
-  <div class="text-3xl">☀️</div>
-  <div>
-    <div class="text-xl font-medium text-gray-800 dark:text-gray-100">28°C</div>
-    <div class="text-sm text-gray-500">Singapore · 晴</div>
-  </div>
-</div>
-<div class="mt-3 text-sm text-gray-400 dark:text-gray-500">
-  明天: 27-32°C 多云
+<div x-data="{ data: {}, loading: true }" x-init="
+  fetch('/api/panels/__PANEL_ID__/data')
+    .then(r => r.json())
+    .then(d => { data = d; loading = false; })
+">
+  <template x-if="!loading && data.temperature">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl">☀️</span>
+      <div>
+        <div class="text-2xl font-semibold text-gray-100">
+          <span x-text="data.temperature"></span>°C
+        </div>
+        <div class="text-sm text-gray-400" x-text="data.condition"></div>
+      </div>
+    </div>
+  </template>
 </div>
 ```
 
-天气图标参考：
-- 晴: ☀️
-- 多云: ⛅ 🌤️
-- 雨: 🌧️
-- 雪: ❄️
-
 ---
 
-## 倒计时卡片
+## 示例 2: Todo 列表（带用户交互）
 
-**minSize**: `2x2`
-
-```html
-<div class="text-center py-4" 
-     x-data="{ days: 0, target: '2026-12-31' }" 
-     x-init="setInterval(() => { 
-       const diff = new Date(target + 'T00:00:00') - new Date();
-       days = Math.max(0, Math.ceil(diff / 86400000));
-     }, 3600000); $nextTick(() => { 
-       const diff = new Date(target + 'T00:00:00') - new Date();
-       days = Math.max(0, Math.ceil(diff / 86400000));
-     })">
-  <div class="text-4xl mb-3">🎄</div>
-  <div class="text-5xl font-medium text-gray-800 dark:text-gray-100 mb-1" x-text="days"></div>
-  <div class="text-sm text-gray-500 dark:text-gray-400">days until</div>
-  <div class="text-lg text-gray-600 dark:text-gray-300 mt-2">Christmas</div>
-</div>
+**创建参数：**
+```json
+{
+  "title": "待办事项",
+  "desc": "可勾选完成的任务清单",
+  "icon": "check-square",
+  "headerColor": "teal",
+  "size": "3x4",
+  "minSize": "3x4",
+  "data": {
+    "items": []
+  }
+}
 ```
 
----
+**handler.py:**
+```python
+import uuid
 
-## Todo 列表（交互版）
+async def handle_action(action: str, payload: dict, data: dict) -> dict:
+    items = data.get("items", [])
+    
+    if action == "add":
+        items.append({
+            "id": uuid.uuid4().hex[:8],
+            "text": payload.get("text", ""),
+            "done": False
+        })
+    elif action == "toggle":
+        for item in items:
+            if item["id"] == payload.get("id"):
+                item["done"] = not item["done"]
+    elif action == "remove":
+        items = [i for i in items if i["id"] != payload.get("id")]
+    
+    data["items"] = items
+    return data
+```
 
-**minSize**: `3x4`
-
+**facade.html:** （使用 PATCH /data 直接更新，不经过 handler）
 ```html
-<div 
-  x-data="todoList()" 
-  x-init="init()" 
-  data-panel-id="__PANEL_ID__"
-  style="display: flex; flex-direction: column; height: 100%;"
->
-  <div style="flex: 1; overflow-y: auto; min-height: 0;">
-    <ul class="space-y-2">
-      <template x-for="item in items" :key="item.id">
-        <li class="flex items-center gap-2 text-sm group">
-          <button @click="toggle(item.id)" 
-                  class="w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border transition-colors"
-                  :class="item.done ? 'border-gray-600 bg-gray-700' : 'border-gray-600 hover:border-gray-500'">
-            <span x-show="item.done" class="text-xs text-gray-400">✓</span>
-          </button>
-          <span class="flex-1" :class="item.done ? 'line-through text-gray-600' : 'text-gray-300'" x-text="item.text"></span>
-          <button @click="remove(item.id)" class="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 p-0.5 flex-shrink-0">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </li>
-      </template>
-    </ul>
-    <p x-show="items.length === 0" class="text-gray-600 text-center py-4 text-sm">No items</p>
-  </div>
-  <form @submit.prevent="add()" style="flex-shrink: 0;" class="flex gap-2 pt-2 mt-2 border-t border-gray-800">
-    <input type="text" x-model="newText" placeholder="Add item..."
-           class="flex-1 text-sm px-2 py-1.5 rounded border border-gray-700 bg-gray-900 text-gray-300 placeholder-gray-600 focus:outline-none focus:border-gray-500">
-    <button type="submit" :disabled="!newText.trim()"
-            class="text-xs px-3 py-1.5 rounded bg-gray-800 text-gray-400 hover:bg-gray-700 disabled:opacity-50">Add</button>
-  </form>
+<div x-data="todoList()" x-init="init()" data-panel-id="__PANEL_ID__">
+  <ul class="space-y-2">
+    <template x-for="item in items" :key="item.id">
+      <li class="flex items-center gap-2 text-sm">
+        <button @click="toggle(item.id)" class="w-4 h-4 rounded border border-gray-600"
+                :class="item.done && 'bg-gray-700'">
+          <span x-show="item.done" class="text-xs text-gray-400">✓</span>
+        </button>
+        <span :class="item.done && 'line-through text-gray-600'" x-text="item.text"></span>
+      </li>
+    </template>
+  </ul>
 </div>
 <script>
-if (!window.todoList) {
-  window.todoList = function() {
-    return {
-      items: [],
-      newText: '',
-      panelId: '',
-      async init() {
-        this.panelId = this.$el.dataset.panelId;
-        try {
-          const res = await fetch('/api/panels/' + this.panelId + '/data');
-          if (res.ok) {
-            const data = await res.json();
-            this.items = data.items || [];
-          }
-        } catch (e) {
-          console.error('Failed to load items:', e);
-        }
-      },
-      async save() {
-        await fetch('/api/panels/' + this.panelId + '/data', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: this.items })
-        });
-      },
-      toggle(id) {
-        const item = this.items.find(i => i.id === id);
-        if (item) { item.done = !item.done; this.save(); }
-      },
-      remove(id) {
-        this.items = this.items.filter(i => i.id !== id);
-        this.save();
-      },
-      add() {
-        if (!this.newText.trim()) return;
-        this.items.push({ id: Date.now().toString(16), text: this.newText.trim(), done: false });
-        this.newText = '';
-        this.save();
-      }
-    };
+window.todoList = window.todoList || function() {
+  return {
+    items: [], panelId: '',
+    async init() {
+      this.panelId = this.$el.dataset.panelId;
+      const res = await fetch('/api/panels/' + this.panelId + '/data');
+      const data = await res.json();
+      this.items = data.items || [];
+    },
+    async save() {
+      await fetch('/api/panels/' + this.panelId + '/data', {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ items: this.items })
+      });
+    },
+    toggle(id) {
+      const item = this.items.find(i => i.id === id);
+      if (item) { item.done = !item.done; this.save(); }
+    }
   };
-}
+};
 </script>
 ```
 
-创建时在 `data` 里提供初始 items：
+---
+
+## 示例 3: Hacker News（定时采集 + Agent 总结）
+
+**创建参数：**
 ```json
 {
-  "type": "todo",
-  "title": "My Tasks",
-  "facade": "...",
-  "data": { "items": [{"id": "1", "text": "First task", "done": false}] },
-  "size": "3x4",
-  "minSize": "3x4"
+  "title": "Hacker News",
+  "desc": "HN 热帖摘要，每小时更新",
+  "icon": "newspaper",
+  "headerColor": "indigo",
+  "size": "4x4"
 }
 ```
 
----
+**handler.py:**
+```python
+import httpx
+from scheduler.decorators import scheduled
 
-## Cookie Clicker 游戏
-
-**minSize**: `3x4`
-
-```html
-<div x-data="{ 
-  cookies: parseInt(localStorage.getItem('cookies') || '0'),
-  click() { 
-    this.cookies++; 
-    localStorage.setItem('cookies', this.cookies);
-  }
-}" class="text-center py-4">
-  <button @click="click()" class="text-6xl hover:scale-110 transition-transform cursor-pointer select-none">
-    🍪
-  </button>
-  <div class="mt-4 text-2xl font-bold text-gray-800 dark:text-gray-100" x-text="cookies.toLocaleString()"></div>
-  <div class="text-sm text-gray-500 dark:text-gray-400">cookies</div>
-</div>
+@scheduled("0 * * * *")  # 每小时
+async def collect(data: dict) -> dict:
+    url = "https://hacker-news.firebaseio.com/v0/topstories.json"
+    
+    async with httpx.AsyncClient() as client:
+        res = await client.get(url)
+        story_ids = res.json()[:10]
+        
+        items = []
+        for sid in story_ids:
+            story_res = await client.get(f"https://hacker-news.firebaseio.com/v0/item/{sid}.json")
+            story = story_res.json()
+            items.append({
+                "title": story.get("title"),
+                "url": story.get("url"),
+                "score": story.get("score"),
+            })
+    
+    data["items"] = items
+    return data
 ```
 
 ---
 
-## 加密货币价格
+## 注意事项
 
-**minSize**: `3x2`
-
-```html
-<div class="space-y-3">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">₿</span>
-      <span class="font-medium text-gray-800 dark:text-gray-100">Bitcoin</span>
-    </div>
-    <div class="text-right">
-      <div class="font-medium text-gray-800 dark:text-gray-100">$97,245</div>
-      <div class="text-xs text-green-500">+2.4%</div>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## 自定义 HTML 注意事项
-
-1. **深色模式** 必须支持，用 `dark:` 前缀
-2. **图片** 用 emoji 或 SVG，避免外部图片加载
-3. **链接** 用 `target="_blank"` 打开新窗口
-4. **间距** 用 Tailwind 的 `space-y-*`, `gap-*`, `p-*`, `m-*`
-5. **持久化数据** 用 `fetch('/api/panels/{panelId}/data', { method: 'PATCH', ... })`
+1. **深色模式** - 用 `dark:` 前缀或直接用 `text-gray-*`
+2. **Panel ID** - facade 中用 `__PANEL_ID__` 占位符
+3. **数据持久化** - 用 `PATCH /api/panels/{id}/data`
+4. **异步 handler** - 推荐用 `async def`
+5. **定时任务** - 用 `@scheduled("cron")` 装饰器
+6. **错误处理** - handler 中 catch 异常，避免整个采集失败

@@ -21,19 +21,42 @@ cd frontend && pnpm build
 
 # 3. 启动服务
 uvicorn app.main:app --reload
+
+# 4. 启动 scheduler（可选，用于定时采集）
+python -m scheduler.panel_scheduler
 ```
 
 访问 http://localhost:8000
 
 ## Panel 系统
 
-每个 Panel 是独立目录，包含：
+每个 Panel 是独立目录：
 
 ```
 data/panels/{panel_id}/
 ├── facade.html   # 外观 (HTML + Alpine.js)
-├── data.json     # 数据 (元信息、状态)
-└── handler.py    # 后端逻辑 (可选，热重载)
+├── data.json     # 数据和配置
+└── handler.py    # 后端逻辑 (可选)
+```
+
+### Handler 模式
+
+handler.py 支持两种触发：
+
+```python
+# HTTP 触发（用户交互）
+async def handle_action(action: str, payload: dict, data: dict) -> dict:
+    pass
+
+# Scheduler 触发（定时采集）
+async def collect(data: dict) -> dict:
+    # 调用外部 API、爬取数据等
+    return data
+```
+
+定时采集需要在 data.json 设置 `schedule`（cron）：
+```json
+{"schedule": "*/30 * * * *"}
 ```
 
 ### API
@@ -46,7 +69,7 @@ data/panels/{panel_id}/
 | PATCH | `/api/panels/{id}` | 更新 panel |
 | DELETE | `/api/panels/{id}` | 删除 panel |
 | PATCH | `/api/panels/{id}/data` | 更新数据 |
-| POST | `/api/panels/{id}/action` | 调用 handler |
+| POST | `/api/panels/{id}/action` | 调用 handle_action |
 
 ### 创建 Panel 示例
 
@@ -54,11 +77,14 @@ data/panels/{panel_id}/
 curl -X POST http://localhost:8000/api/panels \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "todo",
-    "title": "My Tasks",
-    "facade": "<div x-data=\"{count: 0}\">...</div>",
-    "data": {"items": []},
-    "size": "3x4"
+    "title": "天气",
+    "desc": "显示实时天气",
+    "icon": "cloud-sun",
+    "headerColor": "cyan",
+    "facade": "<div>...</div>",
+    "handler": "async def collect(data): ...",
+    "schedule": "*/30 * * * *",
+    "size": "3x3"
   }'
 ```
 
@@ -73,9 +99,10 @@ curl -X POST http://localhost:8000/api/panels \
 ├── data/
 │   ├── dashboard.json    # 布局信息
 │   └── panels/           # Panel 数据目录
+├── scheduler/            # 定时任务
+│   └── panel_scheduler.py
 ├── skills/               # Agent Skills
-├── extensions/           # pi 扩展 (dashboard-tools.ts)
-└── static/               # 构建输出
+└── extensions/           # pi 扩展
 ```
 
 ## 开发
@@ -87,12 +114,11 @@ cd frontend && pnpm dev
 # 后端开发
 uvicorn app.main:app --reload
 
-# 定时任务
-python -m scheduler.main
+# 定时采集
+python -m scheduler.panel_scheduler
 ```
 
 ## Skills
 
 - `skills/_system.md` - 系统提示词
-- `skills/panel_examples.md` - Panel 模板示例
-- `skills/data_collection.md` - 数据采集配置
+- `skills/panel_examples.md` - Panel 模板和示例
