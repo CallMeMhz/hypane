@@ -1,0 +1,51 @@
+# AI Dashboard - Docker Compose
+# 
+# Quick start:
+#   1. Copy .env.example to .env and configure API key
+#   2. docker compose up -d
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-dashboard:latest
+    container_name: ai-dashboard
+    restart: unless-stopped
+    
+    ports:
+      - "${PORT:-8000}:8000"
+    
+    environment:
+      # Pi Agent Provider & Model
+      - PI_PROVIDER=${PI_PROVIDER:-anthropic}
+      - PI_MODEL=${PI_MODEL:-claude-sonnet-4-20250514}
+      
+      # API Keys (Pi reads these directly)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      
+      # Custom provider (optional)
+      - PI_CUSTOM_BASE_URL=${PI_CUSTOM_BASE_URL:-}
+      - PI_CUSTOM_PROVIDER=${PI_CUSTOM_PROVIDER:-}
+      - PI_CUSTOM_API=${PI_CUSTOM_API:-}
+      - PI_CUSTOM_API_KEY_ENV=${PI_CUSTOM_API_KEY_ENV:-}
+      - CUSTOM_API_KEY=${CUSTOM_API_KEY:-}
+      
+      # App
+      - HOST=0.0.0.0
+      - PORT=8000
+      - TZ=${TZ:-Asia/Singapore}
+    
+    volumes:
+      # Persistent data
+      - dashboard-data:/app/data
+      
+      # Or bind mount for direct access:
+      # - ./data:/app/data
+
+volumes:
+  dashboard-data:
+    driver: local

@@ -1,0 +1,51 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.eggs
+*.egg-info
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Node
+node_modules
+frontend/node_modules
+.npm
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data (will be mounted as volumes)
+data/sessions/*
+data/snapshots/*
+data/history/*
+data/task_logs/*
+data/sources/*
+data/*.backup
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Dev files
+.env
+.env.local
+*.log

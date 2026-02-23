@@ -11,6 +11,24 @@ AI 驱动的个人 Dashboard。通过聊天创建和管理 Panel，数据持久�
 
 ## 快速开始
 
+### Docker（推荐）
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env，设置 API key
+
+# 2. 启动
+docker compose up -d
+
+# 查看日志
+docker compose logs -f
+```
+
+访问 http://localhost:8000
+
+### 手动安装
+
 ```bash
 # 1. 安装依赖
 uv sync
@@ -26,7 +44,38 @@ uvicorn app.main:app --reload
 python -m scheduler.panel_scheduler
 ```
 
-访问 http://localhost:8000
+## Docker 配置
+
+### 环境变量
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `PI_PROVIDER` | LLM 提供商 | `anthropic`, `openai`, `google` |
+| `PI_MODEL` | 默认模型 | `claude-sonnet-4-20250514` |
+| `ANTHROPIC_API_KEY` | Anthropic API Key | `sk-ant-...` |
+| `OPENAI_API_KEY` | OpenAI API Key | `sk-...` |
+| `GEMINI_API_KEY` | Google API Key | |
+| `OPENROUTER_API_KEY` | OpenRouter API Key | `sk-or-...` |
+
+### 自定义 Provider（代理/自部署）
+
+```bash
+# .env
+PI_CUSTOM_BASE_URL=https://your-proxy.com/v1
+PI_CUSTOM_PROVIDER=my-proxy
+PI_CUSTOM_API=openai-completions
+PI_CUSTOM_API_KEY_ENV=CUSTOM_API_KEY
+CUSTOM_API_KEY=your-key
+PI_PROVIDER=my-proxy
+```
+
+### 数据持久化
+
+```yaml
+# docker-compose.yml - 使用本地目录
+volumes:
+  - ./data:/app/data
+```
 
 ## Panel 系统
 
