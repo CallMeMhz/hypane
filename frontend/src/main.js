@@ -459,12 +459,67 @@ window.insertCardToChat = async function(cardId) {
 // Alpine components
 Alpine.data('chatBox', () => ({
   expanded: false,
+  showSidebar: false,
+  sessions: [],
   messages: [],
   loading: false,
   currentMessageIndex: -1,
-  cardRefs: [], // [{id, title, html}, ...]
+  cardRefs: [], // [{id, title, html, data}, ...]
   sessionId: generateSessionId(), // Unique session for this browser tab
   abortController: null, // For stopping requests
+
+  async init() {
+    // Load sessions list when sidebar is first shown
+    this.$watch('showSidebar', async (value) => {
+      if (value && this.sessions.length === 0) {
+        await this.loadSessions()
+      }
+    })
+  },
+
+  async loadSessions() {
+    try {
+      const res = await fetch('/api/sessions')
+      if (res.ok) {
+        this.sessions = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to load sessions:', e)
+    }
+  },
+
+  async loadSession(sessionId) {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`)
+      if (res.ok) {
+        const data = await res.json()
+        this.messages = data.messages || []
+        // Update sessionId to continue this session
+        this.sessionId = sessionId.replace('web-', '')
+        this.scrollToBottom()
+      }
+    } catch (e) {
+      console.error('Failed to load session:', e)
+    }
+  },
+
+  newSession() {
+    this.sessionId = generateSessionId()
+    this.messages = []
+    this.cardRefs = []
+  },
+
+  formatDate(isoString) {
+    const date = new Date(isoString)
+    const now = new Date()
+    const diff = now - date
+    
+    if (diff < 60000) return 'just now'
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago'
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago'
+    return date.toLocaleDateString()
+  },
 
   addCardRef(cardId, cardTitle, renderedHtml = '', cardData = null) {
     // Avoid duplicates

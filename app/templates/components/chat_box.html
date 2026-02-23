@@ -1,6 +1,6 @@
 <!-- Chat Box Component (Alpine.js) -->
 <div x-data="chatBox" class="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-  <div class="w-full max-w-2xl px-4 pb-4 pointer-events-auto">
+  <div class="w-full max-w-3xl px-4 pb-4 pointer-events-auto">
     
     <!-- Chat Panel (expandable) -->
     <div 
@@ -11,88 +11,139 @@
       x-transition:leave="transition ease-in duration-150"
       x-transition:leave-start="opacity-100 translate-y-0"
       x-transition:leave-end="opacity-0 -translate-y-2"
-      class="mb-2 rounded-lg shadow-2xl overflow-hidden"
-      style="background: var(--kb-bg-secondary); border: 1px solid var(--kb-border);"
+      class="mb-2 rounded-lg shadow-2xl overflow-hidden flex"
+      style="background: var(--kb-bg-secondary); border: 1px solid var(--kb-border); height: 400px;"
     >
-      <!-- Header -->
-      <div class="px-4 py-2 flex items-center justify-between" style="border-bottom: 1px solid var(--kb-border);">
-        <div class="flex items-center gap-2">
-          <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">Assistant</h3>
-          <span x-show="loading" class="text-xs flex items-center gap-1.5" style="color: var(--kb-text-faint);">
-            <span class="w-1 h-1 rounded-full animate-pulse" style="background: var(--kb-text-faint);"></span>
-            thinking
-          </span>
+      <!-- Sidebar: Session History -->
+      <div 
+        x-show="showSidebar"
+        class="flex-shrink-0 overflow-hidden flex flex-col"
+        style="width: 200px; border-right: 1px solid var(--kb-border); background: var(--kb-bg-primary);"
+      >
+        <div class="px-3 py-2 flex items-center justify-between" style="border-bottom: 1px solid var(--kb-border);">
+          <span class="text-xs font-medium" style="color: var(--kb-text-muted);">History</span>
+          <button @click="newSession()" class="p-1 rounded" style="color: var(--kb-text-dim);"
+                  onmouseover="this.style.color='var(--kb-text-primary)';"
+                  onmouseout="this.style.color='var(--kb-text-dim)';"
+                  title="New chat">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
         </div>
-        <button @click="expanded = false" class="p-1 rounded" style="color: var(--kb-text-dim);"
-                onmouseover="this.style.color='var(--kb-text-primary)';"
-                onmouseout="this.style.color='var(--kb-text-dim)';">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+        <div class="flex-1 overflow-y-auto">
+          <template x-for="session in sessions" :key="session.id">
+            <div 
+              @click="loadSession(session.id)"
+              class="px-3 py-2 cursor-pointer text-xs truncate"
+              :style="session.id === ('web-' + sessionId) ? 
+                'background: var(--kb-bg-tertiary); color: var(--kb-text-primary);' : 
+                'color: var(--kb-text-dim);'"
+              onmouseover="if(this.getAttribute('data-active') !== 'true') this.style.backgroundColor='var(--kb-bg-hover)';"
+              onmouseout="if(this.getAttribute('data-active') !== 'true') this.style.backgroundColor='transparent';"
+              :data-active="session.id === ('web-' + sessionId)"
+              :title="session.preview"
+            >
+              <div class="truncate" x-text="session.preview"></div>
+              <div class="mt-0.5" style="color: var(--kb-text-ghost);" x-text="formatDate(session.updatedAt)"></div>
+            </div>
+          </template>
+          <div x-show="sessions.length === 0" class="px-3 py-4 text-xs text-center" style="color: var(--kb-text-ghost);">
+            No history yet
+          </div>
+        </div>
       </div>
 
-      <!-- Messages -->
-      <div x-ref="messagesContainer" class="overflow-y-auto p-4 space-y-3" style="height: 320px; background: var(--kb-bg-secondary);">
-        <template x-if="messages.length === 0 && !loading">
-          <div class="text-center py-12" style="color: var(--kb-text-faint);">
-            <p class="text-sm">How can I help you?</p>
-            <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">hover card → click wand to reference</p>
+      <!-- Main Chat Area -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <div class="px-4 py-2 flex items-center justify-between flex-shrink-0" style="border-bottom: 1px solid var(--kb-border);">
+          <div class="flex items-center gap-2">
+            <button @click="showSidebar = !showSidebar" class="p-1 rounded" style="color: var(--kb-text-dim);"
+                    onmouseover="this.style.color='var(--kb-text-primary)';"
+                    onmouseout="this.style.color='var(--kb-text-dim)';"
+                    title="Toggle history">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h3 class="text-sm font-medium" style="color: var(--kb-text-primary);">Assistant</h3>
+            <span x-show="loading" class="text-xs flex items-center gap-1.5" style="color: var(--kb-text-faint);">
+              <span class="w-1 h-1 rounded-full animate-pulse" style="background: var(--kb-text-faint);"></span>
+              thinking
+            </span>
           </div>
-        </template>
-        
-        <template x-for="(msg, index) in messages" :key="index">
-          <div>
-            <!-- User message -->
-            <template x-if="msg.role === 'user'">
-              <div class="flex justify-end">
-                <div class="max-w-[80%] px-3 py-2 rounded-lg text-sm" style="background: var(--kb-bg-tertiary); color: var(--kb-text-normal);">
-                  <span x-text="msg.content"></span>
-                </div>
-              </div>
-            </template>
-            
-            <!-- Assistant message -->
-            <template x-if="msg.role === 'assistant'">
-              <div class="flex justify-start">
-                <div class="max-w-[85%] px-3 py-2 text-sm" style="color: var(--kb-text-normal);">
-                  <div x-show="msg.content" x-html="renderMd(msg.content)" class="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-p:leading-relaxed"></div>
-                  <span x-show="!msg.content && loading && index === messages.length - 1" class="inline-flex gap-1">
-                    <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost);"></span>
-                    <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.15s;"></span>
-                    <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.3s;"></span>
-                  </span>
-                </div>
-              </div>
-            </template>
-            
-            <!-- Tool message -->
-            <template x-if="msg.role === 'tool'">
-              <div class="flex justify-center my-1">
-                <div class="flex items-center gap-1.5 px-2 py-0.5 text-xs"
-                     :style="{ color: msg.status === 'error' ? 'var(--kb-red-dim)' : 'var(--kb-text-faint)' }">
-                  <span x-show="msg.status === 'running'" class="w-1 h-1 rounded-full animate-pulse" style="background: var(--kb-text-faint);"></span>
-                  <span x-show="msg.status === 'done'" style="color: var(--kb-text-ghost);">·</span>
-                  <span x-show="msg.status === 'error'">✗</span>
-                  <span x-text="msg.content" class="truncate max-w-[300px]"></span>
-                </div>
-              </div>
-            </template>
-          </div>
-        </template>
+          <button @click="expanded = false" class="p-1 rounded" style="color: var(--kb-text-dim);"
+                  onmouseover="this.style.color='var(--kb-text-primary)';"
+                  onmouseout="this.style.color='var(--kb-text-dim)';">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
 
-        <!-- Initial loading indicator -->
-        <template x-if="loading && messages.length > 0 && messages[messages.length - 1].role === 'user'">
-          <div class="flex justify-start">
-            <div class="px-3 py-2">
-              <span class="inline-flex gap-1">
-                <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost);"></span>
-                <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.15s;"></span>
-                <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.3s;"></span>
-              </span>
+        <!-- Messages -->
+        <div x-ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3" style="background: var(--kb-bg-secondary);">
+          <template x-if="messages.length === 0 && !loading">
+            <div class="text-center py-12" style="color: var(--kb-text-faint);">
+              <p class="text-sm">How can I help you?</p>
+              <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">hover card → click wand to reference</p>
             </div>
-          </div>
-        </template>
+          </template>
+          
+          <template x-for="(msg, index) in messages" :key="index">
+            <div>
+              <!-- User message -->
+              <template x-if="msg.role === 'user'">
+                <div class="flex justify-end">
+                  <div class="max-w-[80%] px-3 py-2 rounded-lg text-sm" style="background: var(--kb-bg-tertiary); color: var(--kb-text-normal);">
+                    <span x-text="msg.content"></span>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Assistant message -->
+              <template x-if="msg.role === 'assistant'">
+                <div class="flex justify-start">
+                  <div class="max-w-[85%] px-3 py-2 text-sm" style="color: var(--kb-text-normal);">
+                    <div x-show="msg.content" x-html="renderMd(msg.content)" class="prose prose-sm prose-invert max-w-none prose-p:my-1 prose-p:leading-relaxed"></div>
+                    <span x-show="!msg.content && loading && index === messages.length - 1" class="inline-flex gap-1">
+                      <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost);"></span>
+                      <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.15s;"></span>
+                      <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.3s;"></span>
+                    </span>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- Tool message -->
+              <template x-if="msg.role === 'tool'">
+                <div class="flex justify-center my-1">
+                  <div class="flex items-center gap-1.5 px-2 py-0.5 text-xs"
+                       :style="{ color: msg.status === 'error' ? 'var(--kb-red-dim)' : 'var(--kb-text-faint)' }">
+                    <span x-show="msg.status === 'running'" class="w-1 h-1 rounded-full animate-pulse" style="background: var(--kb-text-faint);"></span>
+                    <span x-show="msg.status === 'done'" style="color: var(--kb-text-ghost);">·</span>
+                    <span x-show="msg.status === 'error'">✗</span>
+                    <span x-text="msg.content" class="truncate max-w-[300px]"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- Initial loading indicator -->
+          <template x-if="loading && messages.length > 0 && messages[messages.length - 1].role === 'user'">
+            <div class="flex justify-start">
+              <div class="px-3 py-2">
+                <span class="inline-flex gap-1">
+                  <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost);"></span>
+                  <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.15s;"></span>
+                  <span class="w-1 h-1 rounded-full animate-bounce" style="background: var(--kb-text-ghost); animation-delay: 0.3s;"></span>
+                </span>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
 
