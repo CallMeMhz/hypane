@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import AsyncIterator, Optional
 
 from app.config import PI_COMMAND, SKILLS, SESSIONS_DIR, DASHBOARD_EXTENSION
@@ -12,9 +13,24 @@ from app.services.dashboard import get_dashboard
 # 增大行缓冲区限制到 10MB
 STREAM_LIMIT = 10 * 1024 * 1024
 
+# Tasks file path
+TASKS_FILE = Path("data/tasks.json")
+
+
+def get_scheduled_tasks() -> list:
+    """Load scheduled tasks from tasks.json."""
+    if not TASKS_FILE.exists():
+        return []
+    try:
+        with open(TASKS_FILE) as f:
+            data = json.load(f)
+            return data.get("tasks", [])
+    except:
+        return []
+
 
 def get_system_context() -> str:
-    """Generate system context with current time and dashboard outline."""
+    """Generate system context with current time, dashboard outline, and scheduled tasks."""
     now = datetime.now()
     utc_now = datetime.now(timezone.utc)
     
@@ -35,6 +51,17 @@ def get_system_context() -> str:
             lines.append(f"  {i+1}. [{card_id}] {card_type} - {card_title} ({card_size})")
     else:
         lines.append("\nDashboard: empty (no cards)")
+    
+    # Scheduled tasks
+    tasks = get_scheduled_tasks()
+    if tasks:
+        lines.append(f"\nScheduled Tasks ({len(tasks)}):")
+        for task in tasks:
+            status = "enabled" if task.get("enabled", True) else "disabled"
+            task_type = task.get("type", "?")
+            schedule = task.get("schedule", "?")
+            name = task.get("name", task.get("id", "?"))
+            lines.append(f"  - {name} [{task_type}] schedule=\"{schedule}\" ({status})")
     
     return "\n".join(lines)
 
