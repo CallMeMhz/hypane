@@ -132,6 +132,11 @@ async def create_card(request: CreateCardRequest):
         "updatedAt": now.isoformat().replace("+00:00", "Z"),
     }
     
+    # Replace __CARD_ID__ placeholder in content.html with actual card ID
+    if isinstance(content, dict) and content.get('html'):
+        content['html'] = content['html'].replace('__CARD_ID__', card_id)
+        new_card['content'] = content
+    
     # Optional title styling
     if request.titleColor:
         new_card["titleColor"] = request.titleColor
@@ -171,6 +176,11 @@ async def update_card(card_id: str, request: UpdateCardRequest):
                     card["content"].update(request.content)
                 else:
                     card["content"] = request.content
+                
+                # Replace __CARD_ID__ placeholder with actual card ID
+                if isinstance(card.get("content"), dict) and card["content"].get("html"):
+                    card["content"]["html"] = card["content"]["html"].replace("__CARD_ID__", card_id)
+            
             if request.size is not None:
                 card["size"] = enforce_min_size(card.get("type", ""), request.size, card.get("content"))
             if request.type is not None:
