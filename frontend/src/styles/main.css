@@ -36,6 +36,8 @@
     margin-bottom: 1rem;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   
   .card:hover {
@@ -107,6 +109,9 @@
   /* Card content text */
   .card-content {
     color: var(--kb-text-normal);
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
   }
   
   /* Custom HTML content */
