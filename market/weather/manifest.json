@@ -1,0 +1,35 @@
+{
+  "id": "weather",
+  "name": "天气预报",
+  "description": "显示指定城市的实时天气和7天预报，每小时自动更新",
+  "icon": "cloud-sun",
+  "headerColor": "cyan",
+  "defaultSize": "6x3",
+  "minSize": "3x3",
+  "keywords": ["weather", "天气", "预报", "温度", "forecast"],
+  "configSchema": {
+    "location": {
+      "type": "string",
+      "label": "城市",
+      "default": "Singapore"
+    },
+    "latitude": {
+      "type": "number",
+      "label": "纬度",
+      "default": 1.29
+    },
+    "longitude": {
+      "type": "number",
+      "label": "经度", 
+      "default": 103.85
+    }
+  },
+  "defaultData": {
+    "location": "Singapore",
+    "latitude": 1.29,
+    "longitude": 103.85,
+    "temperature": "--",
+    "condition": "--",
+    "days": []
+  }
+}

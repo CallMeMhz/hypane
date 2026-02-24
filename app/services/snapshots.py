@@ -40,7 +40,7 @@ def create_snapshot(
     dashboard: dict,
     action: str,
     details: Optional[str] = None,
-    card_id: Optional[str] = None,
+    panel_id: Optional[str] = None,
 ) -> dict:
     """
     Create a snapshot of the current dashboard state.
@@ -49,7 +49,7 @@ def create_snapshot(
         dashboard: Current dashboard data
         action: What was done (create, update, delete, merge)
         details: Human-readable description
-        card_id: Related card ID if applicable
+        panel_id: Related panel ID if applicable
     
     Returns:
         The changelog entry
@@ -72,8 +72,8 @@ def create_snapshot(
         "timestamp": now.isoformat().replace("+00:00", "Z"),
         "action": action,
         "details": details,
-        "cardId": card_id,
-        "cardCount": len(dashboard.get("cards", [])),
+        "panelId": panel_id,
+        "panelCount": len(dashboard.get("panels", [])),
     }
     
     # Append to changelog
@@ -105,33 +105,33 @@ def get_snapshot_diff(snapshot_id: str, current_dashboard: dict) -> dict:
     if not snapshot:
         return {"error": "Snapshot not found"}
     
-    old_cards = {c["id"]: c for c in snapshot.get("cards", [])}
-    new_cards = {c["id"]: c for c in current_dashboard.get("cards", [])}
+    old_panels = {p["id"]: p for p in snapshot.get("panels", [])}
+    new_panels = {p["id"]: p for p in current_dashboard.get("panels", [])}
     
-    added = [c for cid, c in new_cards.items() if cid not in old_cards]
-    removed = [c for cid, c in old_cards.items() if cid not in new_cards]
+    added = [p for pid, p in new_panels.items() if pid not in old_panels]
+    removed = [p for pid, p in old_panels.items() if pid not in new_panels]
     
     modified = []
-    for cid, new_card in new_cards.items():
-        if cid in old_cards:
-            old_card = old_cards[cid]
-            if json.dumps(old_card, sort_keys=True) != json.dumps(new_card, sort_keys=True):
+    for pid, new_panel in new_panels.items():
+        if pid in old_panels:
+            old_panel = old_panels[pid]
+            if json.dumps(old_panel, sort_keys=True) != json.dumps(new_panel, sort_keys=True):
                 modified.append({
-                    "id": cid,
-                    "title": new_card.get("title"),
-                    "changes": _get_card_changes(old_card, new_card)
+                    "id": pid,
+                    "title": new_panel.get("title"),
+                    "changes": _get_panel_changes(old_panel, new_panel)
                 })
     
     return {
         "snapshotId": snapshot_id,
-        "added": [{"id": c["id"], "title": c.get("title"), "type": c.get("type")} for c in added],
-        "removed": [{"id": c["id"], "title": c.get("title"), "type": c.get("type")} for c in removed],
+        "added": [{"id": p["id"], "title": p.get("title")} for p in added],
+        "removed": [{"id": p["id"], "title": p.get("title")} for p in removed],
         "modified": modified,
     }
 
 
-def _get_card_changes(old: dict, new: dict) -> list[str]:
-    """Get list of changed fields between two cards."""
+def _get_panel_changes(old: dict, new: dict) -> list[str]:
+    """Get list of changed fields between two panels."""
     changes = []
     for key in set(old.keys()) | set(new.keys()):
         if key in ("updatedAt",):

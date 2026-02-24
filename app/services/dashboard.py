@@ -8,18 +8,12 @@ from app.services.panels import get_panel, get_panel_data, list_panels
 
 
 def get_dashboard_layout() -> dict[str, Any]:
-    """
-    Get dashboard layout (panel positions and sizes).
-    """
+    """Get dashboard layout (panel positions and sizes)."""
     if not DASHBOARD_FILE.exists():
         return {"version": 2, "panels": []}
     
     with open(DASHBOARD_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
-    # Handle legacy format (version 1 with 'cards')
-    if data.get("version", 1) == 1 and "cards" in data:
-        return data  # Will be migrated separately
     
     return data
 
@@ -60,11 +54,15 @@ def update_panel_layout(panel_id: str, position: dict = None, size: str = None) 
 def add_panel_to_layout(panel_id: str, position: dict = None, size: str = "3x2") -> None:
     """Add a panel to the layout."""
     layout = get_dashboard_layout()
+    panels = layout.get("panels", [])
+    
+    # Assign order (append to end)
+    max_order = max((p.get("order", 0) for p in panels), default=-1)
     
     # Default position: find next available spot
     if position is None:
         max_y = 0
-        for p in layout.get("panels", []):
+        for p in panels:
             pos = p.get("position", {})
             panel_size = p.get("size", "3x2")
             if "x" in panel_size:
@@ -76,12 +74,14 @@ def add_panel_to_layout(panel_id: str, position: dict = None, size: str = "3x2")
                 max_y = bottom
         position = {"x": 0, "y": max_y}
     
-    layout.setdefault("panels", []).append({
+    panels.append({
         "id": panel_id,
         "position": position,
         "size": size,
+        "order": max_order + 1,
     })
     
+    layout["panels"] = panels
     save_dashboard_layout(layout)
 
 
@@ -105,11 +105,6 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
     """
     layout = get_dashboard_layout()
     
-    # Handle legacy format
-    if layout.get("version", 1) == 1 and "cards" in layout:
-        # Return legacy format as-is for backward compat
-        return layout
-    
     # Build full panel list with data
     panels = []
     for idx, panel_layout in enumerate(layout.get("panels", [])):
@@ -121,7 +116,7 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
                 **panel_data,
                 "position": panel_layout.get("position", {"x": 0, "y": 0}),
                 "size": panel_layout.get("size", "3x2"),
-                "order": panel_layout.get("order", idx),  # Include order
+                "order": panel_layout.get("order", idx),
             })
     
     # Sort by order
@@ -134,10 +129,8 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
     }
 
 
-# === Legacy compatibility ===
-
 def save_dashboard(data: dict[str, Any]) -> None:
-    """Legacy: Save full dashboard (for old code paths)."""
+    """Save full dashboard."""
     DASHBOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(DASHBOARD_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

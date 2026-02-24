@@ -1,0 +1,38 @@
+<div x-data="countdownPanel()" x-init="init()" class="h-full flex flex-col items-center justify-center text-center">
+  <div class="text-sm text-gray-500 mb-2" x-text="eventName"></div>
+  <div class="text-4xl font-bold text-gray-100 mb-1" x-text="days"></div>
+  <div class="text-sm text-gray-400">天</div>
+  <div class="text-xs text-gray-600 mt-3" x-text="targetDate"></div>
+</div>
+
+<script>
+window.countdownPanel = window.countdownPanel || function() {
+  return {
+    targetDate: '',
+    eventName: '目标日',
+    days: '--',
+    panelId: '',
+    
+    async init() {
+      this.panelId = this.$el.closest('[data-panel-id]').dataset.panelId;
+      const res = await fetch('/api/panels/' + this.panelId + '/data');
+      const data = await res.json();
+      this.targetDate = data.targetDate || '';
+      this.eventName = data.eventName || '目标日';
+      this.calculate();
+      setInterval(() => this.calculate(), 60000); // 每分钟更新
+    },
+    
+    calculate() {
+      if (!this.targetDate) {
+        this.days = '--';
+        return;
+      }
+      const target = new Date(this.targetDate);
+      const now = new Date();
+      const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+      this.days = diff;
+    }
+  };
+};
+</script>

@@ -1,0 +1,13 @@
+{
+  "id": "todo",
+  "name": "Todo List",
+  "description": "Task list with add, delete, and toggle completion",
+  "icon": "check-square",
+  "headerColor": "teal",
+  "defaultSize": "3x4",
+  "minSize": "3x3",
+  "keywords": ["todo", "task", "待办", "任务", "清单", "checklist"],
+  "defaultData": {
+    "items": []
+  }
+}

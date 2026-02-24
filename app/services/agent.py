@@ -39,7 +39,7 @@ def get_system_context() -> str:
     
     # Dashboard outline
     dashboard = get_dashboard()
-    panels = dashboard.get("panels", dashboard.get("cards", []))
+    panels = dashboard.get("panels", [])
     
     if panels:
         lines.append(f"\nDashboard ({len(panels)} panels):")

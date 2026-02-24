@@ -75,7 +75,7 @@ function isMobile() {
 
 // Calculate available columns based on container width
 function calculateCols() {
-  const grid = document.getElementById('dashboard-cards')
+  const grid = document.getElementById('dashboard-panels')
   if (!grid) return MIN_COLS
   
   const containerWidth = grid.parentElement.clientWidth - 16 // padding
@@ -85,7 +85,7 @@ function calculateCols() {
 
 // Build grid state from DOM
 function buildGridState() {
-  const grid = document.getElementById('dashboard-cards')
+  const grid = document.getElementById('dashboard-panels')
   if (!grid) return
   
   gridState.cols = calculateCols()
@@ -158,7 +158,7 @@ function flowLayout() {
 
 // Apply positions to DOM
 function applyPositions() {
-  const grid = document.getElementById('dashboard-cards')
+  const grid = document.getElementById('dashboard-panels')
   if (!grid) return
   
   // Find actual used width (rightmost panel edge)
@@ -466,7 +466,7 @@ window.addEventListener('resize', () => {
 
 // Reflow after HTMX swaps (new panels added)
 document.body.addEventListener('htmx:afterSwap', (e) => {
-  if (e.detail.target.id === 'dashboard-cards') {
+  if (e.detail.target.id === 'dashboard-panels') {
     setTimeout(reflow, 50)
   }
 })
@@ -791,7 +791,7 @@ Alpine.data('chatBox', () => ({
   },
 
   refreshDashboard() {
-    htmx.ajax('GET', '/dashboard-cards', { target: '#dashboard-cards', swap: 'innerHTML' })
+    htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
   },
 
   scrollToBottom() {
@@ -808,5 +808,5 @@ Alpine.start()
 
 // Listen for dashboard updates
 document.body.addEventListener('dashboardUpdated', () => {
-  htmx.ajax('GET', '/dashboard-cards', { target: '#dashboard-cards', swap: 'innerHTML' })
+  htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
 })

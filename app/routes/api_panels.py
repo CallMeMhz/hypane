@@ -70,7 +70,7 @@ class PanelActionRequest(BaseModel):
 async def list_panels_api():
     """List all panels with their data."""
     dashboard = get_dashboard()
-    return dashboard.get("panels", dashboard.get("cards", []))
+    return dashboard.get("panels", [])
 
 
 @router.post("")
@@ -102,7 +102,7 @@ async def create_panel_api(request: CreatePanelRequest):
         dashboard,
         action="create",
         details=f"Created panel: {request.title}",
-        card_id=panel_id,
+        panel_id=panel_id,
     )
     
     return get_panel(panel_id)
@@ -165,7 +165,7 @@ async def update_panel_api(panel_id: str, request: UpdatePanelRequest):
         dashboard,
         action="update",
         details=f"Updated panel: {panel_data.get('title', panel_id)}",
-        card_id=panel_id,
+        panel_id=panel_id,
     )
     
     return get_panel(panel_id)
@@ -192,7 +192,7 @@ async def delete_panel_api(panel_id: str):
         dashboard,
         action="delete",
         details=f"Deleted panel: {title}",
-        card_id=panel_id,
+        panel_id=panel_id,
     )
     
     return {"success": True, "id": panel_id}
@@ -302,10 +302,10 @@ class UpdateOrderRequest(BaseModel):
 @router.post("/order")
 async def update_panel_order(request: UpdateOrderRequest):
     """Batch update panel order."""
-    from app.services.dashboard import get_dashboard, save_dashboard
+    from app.services.dashboard import get_dashboard_layout, save_dashboard_layout
     
-    dashboard = get_dashboard()
-    panels = dashboard.get("panels", dashboard.get("cards", []))
+    layout = get_dashboard_layout()
+    panels = layout.get("panels", [])
     
     # Create lookup
     order_map = {item.id: item.order for item in request.panels}
@@ -325,7 +325,7 @@ async def update_panel_order(request: UpdateOrderRequest):
     panels.sort(key=lambda p: p.get("order", 0))
     
     # Save
-    dashboard["panels"] = panels
-    save_dashboard(dashboard)
+    layout["panels"] = panels
+    save_dashboard_layout(layout)
     
     return {"success": True, "updated": len(request.panels)}

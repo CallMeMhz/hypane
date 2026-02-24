@@ -1,0 +1,54 @@
+<div x-data="weatherPanel()" x-init="init()" class="flex gap-3 h-full items-center">
+  <!-- 今日天气 -->
+  <div class="flex-shrink-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl p-4 text-center min-w-[100px]">
+    <div class="text-4xl mb-1" x-text="today.icon">☀️</div>
+    <div class="text-2xl font-bold text-gray-100" x-text="data.temperature">--°C</div>
+    <div class="text-xs text-gray-500 mt-1" x-text="today.condition">--</div>
+    <div class="text-xs text-gray-400 mt-1">
+      <span x-text="today.high">--</span>° / <span x-text="today.low">--</span>°
+    </div>
+    <div class="text-xs text-blue-500 font-medium mt-1">今天</div>
+  </div>
+  
+  <!-- 未来几天 -->
+  <div class="flex gap-2 overflow-x-auto flex-1">
+    <template x-for="day in futureDays" :key="day.day">
+      <div class="text-center p-2 min-w-[48px]">
+        <div class="text-xs text-gray-500" x-text="day.day"></div>
+        <div class="text-xl my-1" x-text="day.icon"></div>
+        <div class="text-xs text-gray-300"><span x-text="day.high"></span>°</div>
+        <div class="text-xs text-gray-400"><span x-text="day.low"></span>°</div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script>
+window.weatherPanel = window.weatherPanel || function() {
+  return {
+    data: {},
+    today: { icon: '☀️', condition: '--', high: '--', low: '--' },
+    futureDays: [],
+    panelId: '',
+    
+    async init() {
+      this.panelId = this.$el.closest('[data-panel-id]').dataset.panelId;
+      await this.load();
+      setInterval(() => this.load(), 5 * 60 * 1000);
+    },
+    
+    async load() {
+      try {
+        const res = await fetch('/api/panels/' + this.panelId + '/data');
+        this.data = await res.json();
+        if (this.data.days && this.data.days.length > 0) {
+          this.today = this.data.days[0];
+          this.futureDays = this.data.days.slice(1);
+        }
+      } catch (e) {
+        console.error('Failed to load weather:', e);
+      }
+    }
+  };
+};
+</script>

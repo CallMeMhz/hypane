@@ -10,6 +10,20 @@
     </div>
     
     <div class="flex items-center gap-2">
+      <!-- Add Panel Button -->
+      <button 
+        onclick="window.openMarketModal()"
+        class="p-2 rounded-lg transition-colors"
+        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
+        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+        onmouseout="this.style.backgroundColor='transparent'"
+        title="Add Panel"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+      
       <!-- Tasks Button -->
       <button 
         onclick="window.openTasksModal()"
@@ -44,13 +58,11 @@
   </header>
 
   <!-- Dashboard Panels Grid -->
-  <div id="dashboard-cards" 
+  <div id="dashboard-panels" 
        class="dashboard-grid"
-       hx-get="/dashboard-cards" 
+       hx-get="/dashboard-panels" 
        hx-trigger="refresh from:body">
-    {# Support both v1 (cards) and v2 (panels) formats #}
-    {% set items = panels if panels else cards %}
-    {% for panel in items %}
+    {% for panel in panels %}
       {% include "partials/panel.html" %}
     {% else %}
       <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
@@ -137,6 +149,69 @@
   </div>
 </div>
 
+<!-- Market Modal -->
+<div id="market-modal" 
+     x-data="marketModal" 
+     x-show="open" 
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center"
+     @keydown.escape.window="open = false">
+  <!-- Backdrop -->
+  <div class="modal-overlay absolute inset-0" @click="open = false"></div>
+  
+  <!-- Modal -->
+  <div class="modal-content relative rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--kb-border);">
+      <h2 class="text-lg font-medium" style="color: var(--kb-text-primary);">Add Panel</h2>
+      <button @click="open = false" class="p-1 rounded" style="color: var(--kb-text-dim);">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Content -->
+    <div class="px-6 py-4 overflow-y-auto max-h-[60vh]">
+      <div x-show="loading" class="text-center py-8" style="color: var(--kb-text-dim);">Loading...</div>
+      
+      <!-- Panel Grid - click to install directly -->
+      <div x-show="!loading" class="grid grid-cols-2 gap-3">
+        <template x-for="panel in panels" :key="panel.id">
+          <button 
+            @click="installDirect(panel)"
+            :disabled="installing === panel.id"
+            class="p-4 rounded-lg text-left transition-colors disabled:opacity-50"
+            style="border: 1px solid var(--kb-border);"
+            onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+            onmouseout="this.style.backgroundColor='transparent'"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl" 
+                   :style="'background: var(--kb-' + panel.headerColor + ');'">
+                <span x-text="getEmoji(panel.icon)"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium" style="color: var(--kb-text-primary);" x-text="panel.name"></div>
+                <div class="text-xs truncate" style="color: var(--kb-text-muted);" x-text="panel.description"></div>
+              </div>
+              <div x-show="installing === panel.id" class="ml-2">
+                <svg class="w-4 h-4 animate-spin" style="color: var(--kb-text-muted);" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            </div>
+          </button>
+        </template>
+      </div>
+      
+      <!-- Error -->
+      <div x-show="error" class="mt-3 text-sm text-center" style="color: var(--kb-red);" x-text="error"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 function toggleTheme() {
   const html = document.documentElement;
@@ -156,6 +231,27 @@ window.openTasksModal = function() {
     data.open = true;
     data.loadTasks();
   }
+};
+
+window.openMarketModal = function() {
+  const el = document.getElementById('market-modal');
+  if (el && el._x_dataStack) {
+    const data = el._x_dataStack[0];
+    data.open = true;
+    data.loadPanels();
+  }
+};
+
+// Icon to emoji mapping
+const iconEmojis = {
+  'check-square': '✅',
+  'cloud': '🌤️',
+  'globe': '🌐',
+  'play': '▶️',
+  'image': '🖼️',
+  'calendar': '📅',
+  'clock': '⏰',
+  'default': '📦'
 };
 
 // Tasks Modal Alpine component
@@ -191,7 +287,7 @@ document.addEventListener('alpine:init', () => {
         if (task) task.lastRun = result;
         // Refresh dashboard if needed
         if (result.success) {
-          htmx.ajax('GET', '/dashboard-cards', { target: '#dashboard-cards', swap: 'innerHTML' });
+          htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' });
         }
       } catch (e) {
         this.taskResults[taskId] = { success: false, error: e.message };
@@ -204,6 +300,55 @@ document.addEventListener('alpine:init', () => {
       if (!isoString) return '';
       const d = new Date(isoString);
       return d.toLocaleString();
+    }
+  }));
+  
+  Alpine.data('marketModal', () => ({
+    open: false,
+    loading: false,
+    panels: [],
+    installing: null,
+    error: null,
+    
+    async loadPanels() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await fetch('/api/market');
+        this.panels = await res.json();
+      } catch (e) {
+        console.error('Failed to load market:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    getEmoji(icon) {
+      return iconEmojis[icon] || iconEmojis.default;
+    },
+    
+    async installDirect(panel) {
+      this.installing = panel.id;
+      this.error = null;
+      try {
+        const res = await fetch(`/api/market/${panel.id}/install`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const result = await res.json();
+        if (result.success) {
+          this.open = false;
+          // Refresh dashboard
+          htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' });
+        } else {
+          this.error = result.error || 'Failed to install panel';
+        }
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.installing = null;
+      }
     }
   }));
 });

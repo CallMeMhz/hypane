@@ -1,0 +1,36 @@
+<div x-data="youtubePanel()" x-init="init()" class="h-full w-full">
+  <template x-if="videoId">
+    <iframe :src="embedUrl" class="w-full h-full border-0 rounded"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+  </template>
+  <template x-if="!videoId">
+    <div class="h-full flex items-center justify-center text-gray-500 text-sm">
+      未配置视频 ID
+    </div>
+  </template>
+</div>
+
+<script>
+window.youtubePanel = window.youtubePanel || function() {
+  return {
+    videoId: '',
+    autoplay: false,
+    panelId: '',
+    
+    get embedUrl() {
+      let url = `https://www.youtube.com/embed/${this.videoId}`;
+      if (this.autoplay) url += '?autoplay=1';
+      return url;
+    },
+    
+    async init() {
+      this.panelId = this.$el.closest('[data-panel-id]').dataset.panelId;
+      const res = await fetch('/api/panels/' + this.panelId + '/data');
+      const data = await res.json();
+      this.videoId = data.videoId || '';
+      this.autoplay = data.autoplay || false;
+    }
+  };
+};
+</script>

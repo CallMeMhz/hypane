@@ -1,0 +1,37 @@
+{
+  "id": "poster",
+  "name": "海报/图片",
+  "description": "展示图片、海报、封面等，支持链接跳转",
+  "icon": "image",
+  "headerColor": "purple",
+  "defaultSize": "3x4",
+  "minSize": "2x2",
+  "keywords": ["poster", "image", "图片", "海报", "封面", "照片"],
+  "configSchema": {
+    "imageUrl": {
+      "type": "string",
+      "label": "图片地址",
+      "required": true
+    },
+    "linkUrl": {
+      "type": "string",
+      "label": "点击跳转链接"
+    },
+    "alt": {
+      "type": "string",
+      "label": "图片描述"
+    },
+    "fit": {
+      "type": "select",
+      "label": "缩放方式",
+      "options": ["cover", "contain", "fill"],
+      "default": "cover"
+    }
+  },
+  "defaultData": {
+    "imageUrl": "",
+    "linkUrl": "",
+    "alt": "",
+    "fit": "cover"
+  }
+}

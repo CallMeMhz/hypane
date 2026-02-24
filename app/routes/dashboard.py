@@ -43,44 +43,28 @@ def enrich_panels_with_facade(panels: list) -> list:
 async def index(request: Request):
     """Render the main dashboard page."""
     dashboard = get_dashboard()
-    
-    # v2 format: panels
-    panels = dashboard.get("panels", [])
-    if panels:
-        panels = enrich_panels_with_facade(panels)
-    
-    # v1 fallback: cards
-    cards = dashboard.get("cards", [])
+    panels = enrich_panels_with_facade(dashboard.get("panels", []))
     
     return templates.TemplateResponse(
         "dashboard.html",
         {
             "request": request,
             "panels": panels,
-            "cards": cards,
             "preferences": dashboard.get("userPreferences", {}),
         },
     )
 
 
-@router.get("/dashboard-cards", response_class=HTMLResponse)
-async def dashboard_cards(request: Request):
+@router.get("/dashboard-panels", response_class=HTMLResponse)
+async def dashboard_panels(request: Request):
     """Return just the panels HTML for HTMX refresh."""
     dashboard = get_dashboard()
-    
-    # v2 format: panels
-    panels = dashboard.get("panels", [])
-    if panels:
-        panels = enrich_panels_with_facade(panels)
-    
-    # v1 fallback: cards
-    cards = dashboard.get("cards", [])
+    panels = enrich_panels_with_facade(dashboard.get("panels", []))
     
     return templates.TemplateResponse(
         "partials/panels_grid.html",
         {
             "request": request,
             "panels": panels,
-            "cards": cards,
         },
     )

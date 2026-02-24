@@ -1,0 +1,27 @@
+{
+  "id": "youtube",
+  "name": "YouTube 视频",
+  "description": "嵌入 YouTube 视频播放器",
+  "icon": "play-circle",
+  "headerColor": "red",
+  "defaultSize": "6x4",
+  "minSize": "4x3",
+  "keywords": ["youtube", "video", "视频", "播放"],
+  "configSchema": {
+    "videoId": {
+      "type": "string",
+      "label": "视频 ID",
+      "description": "YouTube 视频 ID，如 dQw4w9WgXcQ",
+      "required": true
+    },
+    "autoplay": {
+      "type": "boolean",
+      "label": "自动播放",
+      "default": false
+    }
+  },
+  "defaultData": {
+    "videoId": "",
+    "autoplay": false
+  }
+}
