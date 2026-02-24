@@ -158,10 +158,11 @@ def save_panel_handler(panel_id: str, code: str) -> None:
 
 async def invoke_handler(panel_id: str, action: str, payload: dict) -> Optional[dict]:
     """
-    Invoke panel handler's handle_action function.
+    Invoke panel handler function.
     
-    Handler should export:
-        async def handle_action(action: str, payload: dict, data: dict) -> dict
+    Supports:
+        - handle_action(action, payload, data) -> dict  # For user interactions
+        - Any @scheduled decorated function (called by action name)
     
     Returns updated data, or None if no handler or error.
     """
@@ -169,25 +170,60 @@ async def invoke_handler(panel_id: str, action: str, payload: dict) -> Optional[
     if handler is None:
         return None
     
-    if not hasattr(handler, "handle_action"):
-        return None
-    
     data = get_panel_data(panel_id) or {}
     
+    # Find function to call
+    func = None
+    
+    # First check for handle_action (legacy/explicit)
+    if action == "handle_action" and hasattr(handler, "handle_action"):
+        func = handler.handle_action
+    
+    # Then check for function matching action name (e.g., "refresh_weather", "collect")
+    if func is None and hasattr(handler, action):
+        func = getattr(handler, action)
+    
+    # Also check for any @scheduled function if no specific match
+    if func is None:
+        for name in dir(handler):
+            if name.startswith("_"):
+                continue
+            obj = getattr(handler, name)
+            if callable(obj) and hasattr(obj, "_scheduled_cron"):
+                func = obj
+                break
+    
+    if func is None:
+        return None
+    
     try:
-        handle_fn = handler.handle_action
-        # Support both sync and async handlers
         import asyncio
-        if asyncio.iscoroutinefunction(handle_fn):
-            result = await handle_fn(action, payload, data)
+        import inspect
+        
+        # Call function with appropriate arguments
+        sig = inspect.signature(func)
+        params = list(sig.parameters.keys())
+        
+        if len(params) == 3:  # handle_action(action, payload, data)
+            if asyncio.iscoroutinefunction(func):
+                result = await func(action, payload, data)
+            else:
+                result = func(action, payload, data)
+        elif len(params) == 1:  # scheduled func(data)
+            if asyncio.iscoroutinefunction(func):
+                result = await func(data)
+            else:
+                result = func(data)
         else:
-            result = handle_fn(action, payload, data)
+            result = None
         
         if result is not None:
             save_panel_data(panel_id, result)
             return result
     except Exception as e:
         print(f"[ERROR] Handler error for {panel_id}.{action}: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     
     return data
