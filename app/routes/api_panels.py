@@ -329,3 +329,43 @@ async def update_panel_order(request: UpdateOrderRequest):
     save_dashboard_layout(layout)
     
     return {"success": True, "updated": len(request.panels)}
+
+
+# === Batch Position Update ===
+
+class PanelPositionUpdate(BaseModel):
+    id: str
+    x: int
+    y: int
+
+
+class UpdatePositionsRequest(BaseModel):
+    panels: list[PanelPositionUpdate]
+
+
+@router.post("/positions")
+async def update_panel_positions(request: UpdatePositionsRequest):
+    """Batch update panel positions."""
+    from app.services.dashboard import get_dashboard_layout, save_dashboard_layout
+    
+    layout = get_dashboard_layout()
+    panels = layout.get("panels", [])
+    
+    # Create lookup
+    pos_map = {item.id: {"x": item.x, "y": item.y} for item in request.panels}
+    
+    # Update position for each panel
+    for panel in panels:
+        panel_id = panel.get("id", "")
+        # Strip panel- prefix if present
+        clean_id = panel_id.replace("panel-", "") if panel_id.startswith("panel-") else panel_id
+        
+        if panel_id in pos_map:
+            panel["position"] = pos_map[panel_id]
+        elif clean_id in pos_map:
+            panel["position"] = pos_map[clean_id]
+    
+    # Save
+    save_dashboard_layout(layout)
+    
+    return {"success": True, "updated": len(request.panels)}

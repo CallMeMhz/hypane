@@ -10,12 +10,16 @@
 {% set panel_order = panel.order if panel.order is defined else 0 %}
 {% set min_size = panel.minSize or '2x2' %}
 {% set header_color = panel.headerColor or 'gray' %}
+{% set pos_x = panel.position.x if panel.position else 0 %}
+{% set pos_y = panel.position.y if panel.position else 0 %}
 
 <div 
   id="panel-{{ panel.id }}"
   class="card {{ size_class }}"
   data-panel-id="{{ panel.id }}"
   data-grid-size="{{ grid_size }}"
+  data-grid-x="{{ pos_x }}"
+  data-grid-y="{{ pos_y }}"
   data-min-size="{{ min_size }}"
   data-order="{{ panel_order }}"
   hx-get="/panels/{{ panel.id }}"

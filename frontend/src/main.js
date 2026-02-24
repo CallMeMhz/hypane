@@ -68,6 +68,9 @@ let gridState = {
   panels: [],           // [{id, order, w, h, el, x, y}, ...]
 }
 
+// Settings
+let autoCompact = false  // Whether to auto-compact other panels when dragging
+
 // Check if mobile mode
 function isMobile() {
   return window.innerWidth < MOBILE_BREAKPOINT
@@ -93,66 +96,116 @@ function buildGridState() {
   
   const panels = grid.querySelectorAll('.card')
   panels.forEach((panel, index) => {
-    const order = parseInt(panel.dataset.order) || index
     const size = panel.dataset.gridSize || '2x2'
     const [w, h] = size.split('x').map(Number)
+    const x = parseInt(panel.dataset.gridX) || 0
+    const y = parseInt(panel.dataset.gridY) || 0
     
     gridState.panels.push({
       id: panel.id,
-      order: order,
       w: w,
       h: h,
-      el: panel,
-      x: 0,
-      y: 0
+      x: x,
+      y: y,
+      origX: x,  // Remember original position
+      origY: y,
+      el: panel
     })
   })
-  
-  // Sort by order
-  gridState.panels.sort((a, b) => a.order - b.order)
 }
 
-// Flow layout: place panels in order, wrapping to next row as needed
-function flowLayout() {
+// Check if two rectangles overlap
+function rectsOverlap(a, b) {
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y
+}
+
+// Push away overlapping cards, restore non-overlapping to original position
+function pushAwayCards(excludeId) {
   const cols = gridState.cols
-  const placed = []  // [{x, y, w, h}, ...]
+  const draggedCard = gridState.panels.find(c => c.id === excludeId)
+  if (!draggedCard) return
   
-  for (const panel of gridState.panels) {
+  for (const card of gridState.panels) {
+    if (card.id === excludeId) continue
+    
+    // Check if card at original position would overlap with dragged card
+    const cardAtOrig = { x: card.origX, y: card.origY, w: card.w, h: card.h }
+    
+    if (rectsOverlap(cardAtOrig, draggedCard)) {
+      // Need to push away - find a safe spot below dragged card
+      card.x = card.origX
+      card.y = draggedCard.y + draggedCard.h
+      
+      // Make sure we don't overlap with other cards at their current positions
+      let safe = false
+      while (!safe && card.y < 100) {
+        safe = true
+        for (const other of gridState.panels) {
+          if (other.id === card.id || other.id === excludeId) continue
+          if (rectsOverlap(card, other)) {
+            card.y = other.y + other.h
+            safe = false
+            break
+          }
+        }
+      }
+    } else {
+      // No overlap - restore to original position
+      card.x = card.origX
+      card.y = card.origY
+    }
+  }
+}
+
+// Compact cards: reposition all cards to fill gaps, keeping excluded card fixed
+function compactCards(excludeId = null) {
+  const cols = gridState.cols
+  
+  // Sort cards by position (top-left to bottom-right)
+  const cardsToPlace = gridState.panels
+    .filter(c => c.id !== excludeId)
+    .sort((a, b) => a.y === b.y ? a.x - b.x : a.y - b.y)
+  
+  // Place the excluded card first (if any) - it stays fixed
+  const placedCards = []
+  const excludedCard = gridState.panels.find(c => c.id === excludeId)
+  if (excludedCard) {
+    placedCards.push(excludedCard)
+  }
+  
+  // Place each card in the first available position
+  for (const card of cardsToPlace) {
+    let placed = false
+    
     // Clamp width to available columns
-    const panelW = Math.min(panel.w, cols)
-    const panelH = panel.h
+    const cardW = Math.min(card.w, cols)
     
-    // Find first position where panel fits
-    let bestX = 0, bestY = 0
-    let found = false
-    
-    for (let y = 0; y < 1000 && !found; y++) {
-      for (let x = 0; x <= cols - panelW; x++) {
-        // Check if this position is free
-        let fits = true
-        for (const p of placed) {
-          // Check overlap
+    // Try to find a spot from top-left
+    for (let y = 0; y < 100 && !placed; y++) {
+      for (let x = 0; x <= cols - cardW && !placed; x++) {
+        // Check overlap with already placed cards
+        let overlaps = false
+        for (const p of placedCards) {
           if (x < p.x + p.w &&
-              x + panelW > p.x &&
+              x + cardW > p.x &&
               y < p.y + p.h &&
-              y + panelH > p.y) {
-            fits = false
+              y + card.h > p.y) {
+            overlaps = true
             break
           }
         }
         
-        if (fits) {
-          bestX = x
-          bestY = y
-          found = true
-          break
+        if (!overlaps) {
+          card.x = x
+          card.y = y
+          placedCards.push(card)
+          placed = true
         }
       }
     }
-    
-    panel.x = bestX
-    panel.y = bestY
-    placed.push({ x: bestX, y: bestY, w: panelW, h: panelH })
   }
 }
 
@@ -192,25 +245,26 @@ function applyPositions() {
 function reflow() {
   if (isMobile()) return
   buildGridState()
-  flowLayout()
+  compactCards()
   applyPositions()
 }
 
-// Save panel order to backend
-async function saveOrder() {
-  const updates = gridState.panels.map((p, idx) => ({
+// Save panel positions to backend
+async function savePositions() {
+  const updates = gridState.panels.map(p => ({
     id: p.id.replace(/^panel-/, ''),
-    order: idx
+    x: p.x,
+    y: p.y
   }))
   
   try {
-    await fetch('/api/panels/order', {
+    await fetch('/api/panels/positions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ panels: updates })
     })
   } catch (e) {
-    console.error('Failed to save order:', e)
+    console.error('Failed to save positions:', e)
   }
 }
 
@@ -218,7 +272,9 @@ async function saveOrder() {
 function initCardDrag() {
   let dragPanel = null
   let dragPlaceholder = null
-  let dragStartOrder = -1
+  let dragOverlay = null
+  let startGridX = 0
+  let startGridY = 0
   
   document.addEventListener('mousedown', (e) => {
     if (isMobile()) return
@@ -231,18 +287,28 @@ function initCardDrag() {
     
     e.preventDefault()
     buildGridState()
-    flowLayout()
     
     const panelState = gridState.panels.find(p => p.id === card.id)
     if (!panelState) return
     
     dragPanel = panelState
-    dragStartOrder = panelState.order
+    startGridX = panelState.x
+    startGridY = panelState.y
     
     const startX = e.clientX
     const startY = e.clientY
     const startLeft = panelState.x * (CELL_SIZE + GRID_GAP)
     const startTop = panelState.y * (CELL_SIZE + GRID_GAP)
+    
+    // Create overlay to capture all mouse events (prevents resize handle interference)
+    dragOverlay = document.createElement('div')
+    dragOverlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      cursor: grabbing;
+    `
+    document.body.appendChild(dragOverlay)
     
     // Create placeholder
     dragPlaceholder = document.createElement('div')
@@ -278,50 +344,31 @@ function initCardDrag() {
       // Calculate target grid position
       const cols = gridState.cols
       const panelW = Math.min(panelState.w, cols)
-      let targetX = Math.round((startLeft + deltaX) / (CELL_SIZE + GRID_GAP))
-      let targetY = Math.round((startTop + deltaY) / (CELL_SIZE + GRID_GAP))
-      targetX = Math.max(0, Math.min(cols - panelW, targetX))
-      targetY = Math.max(0, targetY)
+      let newX = Math.round((startLeft + deltaX) / (CELL_SIZE + GRID_GAP))
+      let newY = Math.round((startTop + deltaY) / (CELL_SIZE + GRID_GAP))
+      newX = Math.max(0, Math.min(cols - panelW, newX))
+      newY = Math.max(0, newY)
       
-      // Find which order position this corresponds to
-      // Look at center points of other panels
-      let newOrder = gridState.panels.length - 1
-      const dragCenterX = targetX + panelW / 2
-      const dragCenterY = targetY + panelState.h / 2
+      // Update placeholder position
+      dragPlaceholder.style.left = `calc(${newX} * (var(--cell-size) + var(--grid-gap)))`
+      dragPlaceholder.style.top = `calc(${newY} * (var(--cell-size) + var(--grid-gap)))`
       
-      for (let i = 0; i < gridState.panels.length; i++) {
-        const p = gridState.panels[i]
-        if (p.id === dragPanel.id) continue
+      // If position changed, update
+      if (newX !== panelState.x || newY !== panelState.y) {
+        panelState.x = newX
+        panelState.y = newY
         
-        const pCenterY = p.y + p.h / 2
-        const pCenterX = p.x + p.w / 2
-        
-        // If drag is above this panel's center, insert before it
-        if (dragCenterY < pCenterY || (dragCenterY === pCenterY && dragCenterX < pCenterX)) {
-          newOrder = i
-          break
+        // Push away overlapping cards (always), or full compact if autoCompact
+        if (autoCompact) {
+          compactCards(panelState.id)
+        } else {
+          pushAwayCards(panelState.id)
         }
-      }
-      
-      // Reorder if changed
-      if (newOrder !== dragPanel.order) {
-        // Remove from current position
-        gridState.panels = gridState.panels.filter(p => p.id !== dragPanel.id)
-        // Insert at new position
-        gridState.panels.splice(newOrder, 0, dragPanel)
-        // Update order values
-        gridState.panels.forEach((p, idx) => p.order = idx)
         
-        // Reflow all except dragged panel
-        flowLayout()
-        
-        // Update placeholder position
-        dragPlaceholder.style.left = `calc(${dragPanel.x} * (var(--cell-size) + var(--grid-gap)))`
-        dragPlaceholder.style.top = `calc(${dragPanel.y} * (var(--cell-size) + var(--grid-gap)))`
-        
-        // Apply positions to other panels
+        // Apply positions to other panels (with transition)
         for (const p of gridState.panels) {
           if (p.id === dragPanel.id) continue
+          p.el.style.transition = 'left 0.15s, top 0.15s'
           p.el.style.left = `calc(${p.x} * (var(--cell-size) + var(--grid-gap)))`
           p.el.style.top = `calc(${p.y} * (var(--cell-size) + var(--grid-gap)))`
         }
@@ -331,6 +378,12 @@ function initCardDrag() {
     const onMouseUp = async () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      
+      // Remove overlay
+      if (dragOverlay) {
+        dragOverlay.remove()
+        dragOverlay = null
+      }
       
       if (dragPlaceholder) {
         dragPlaceholder.remove()
@@ -342,12 +395,17 @@ function initCardDrag() {
       card.style.opacity = ''
       card.style.boxShadow = ''
       
+      // Clear transitions on other panels
+      for (const p of gridState.panels) {
+        p.el.style.transition = ''
+      }
+      
       // Snap to final position
       applyPositions()
       
-      // Save new order if changed
-      if (dragPanel.order !== dragStartOrder) {
-        await saveOrder()
+      // Save positions if changed
+      if (dragPanel.x !== startGridX || dragPanel.y !== startGridY) {
+        await savePositions()
       }
       
       dragPanel = null
@@ -368,7 +426,7 @@ function initCardResize() {
     
     e.preventDefault()
     buildGridState()
-    flowLayout()
+    if (autoCompact) compactCards()
     
     const cardId = handle.dataset.cardId || handle.dataset.panelId
     const card = document.getElementById('card-' + cardId) || document.getElementById('panel-' + cardId)
@@ -392,7 +450,18 @@ function initCardResize() {
       minH = h || 2
     }
     
+    // Create overlay to capture all mouse events
+    const resizeOverlay = document.createElement('div')
+    resizeOverlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      cursor: se-resize;
+    `
+    document.body.appendChild(resizeOverlay)
+    
     card.style.transition = 'none'
+    card.style.zIndex = '100'
     
     const updateCardSize = (w, h) => {
       card.className = card.className.replace(/\bw\d+\b/g, '').replace(/\bh\d+\b/g, '').trim()
@@ -415,8 +484,10 @@ function initCardResize() {
       
       if (newW !== panelState.w || newH !== panelState.h) {
         updateCardSize(newW, newH)
-        flowLayout()
-        applyPositions()
+        if (autoCompact) {
+          compactCards()
+          applyPositions()
+        }
       }
     }
     
@@ -424,7 +495,10 @@ function initCardResize() {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
       
+      resizeOverlay.remove()
+      
       card.style.transition = ''
+      card.style.zIndex = ''
       
       // Save size
       const newSize = `${panelState.w}x${panelState.h}`
@@ -451,6 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   initCardDrag()
   initCardResize()
+  
+  // Expose autoCompact toggle
+  window.setAutoCompact = (value) => { autoCompact = !!value }
+  window.getAutoCompact = () => autoCompact
+  window.compactAll = () => { buildGridState(); compactCards(); applyPositions(); savePositions() }
 })
 
 // Reflow on resize
