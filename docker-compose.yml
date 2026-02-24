@@ -1,4 +1,4 @@
-# AI Dashboard - Docker Compose
+# Hypane - AI-powered Dashboard
 # 
 # Quick start:
 #   1. Copy .env.example to .env and configure API key
@@ -9,8 +9,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-dashboard:latest
-    container_name: ai-dashboard
+    image: hypane:latest
+    container_name: hypane
     restart: unless-stopped
     
     ports:

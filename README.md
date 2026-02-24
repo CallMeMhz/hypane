@@ -1,173 +1,100 @@
-# AI Dashboard
+# Hypane
 
-AI 驱动的个人 Dashboard。通过聊天创建和管理 Panel，数据持久化。
+AI-powered personal dashboard. Create and manage panels through chat.
 
-## 技术栈
+## Features
 
-- **后端**: Python 3.12+ / FastAPI / Jinja2
-- **前端**: HTMX 2.x / Alpine.js / Tailwind CSS 4.x
-- **Agent**: pi (CLI)
-- **定时任务**: APScheduler
+- 🎛️ **Panel System** - Drag & drop, resizable tiles with flow layout
+- 🤖 **AI Integration** - Create panels via natural language chat
+- ⏰ **Scheduled Tasks** - Auto-refresh with `@scheduled` decorator
+- 📱 **Responsive** - Dynamic columns, mobile-friendly
+- 🎨 **Dark Theme** - Obsidian-inspired Kabadoni theme
 
-## 快速开始
+## Tech Stack
 
-### Docker（推荐）
+- **Backend**: Python 3.12+ / FastAPI / Jinja2
+- **Frontend**: HTMX 2.x / Alpine.js / Tailwind CSS 4.x
+- **Agent**: [Pi](https://github.com/mariozechner/pi-coding-agent) (CLI)
+- **Scheduler**: APScheduler
+
+## Quick Start
+
+### Docker (Recommended)
 
 ```bash
-# 1. 配置环境变量
+# 1. Configure environment
 cp .env.example .env
-# 编辑 .env，设置 API key
+# Edit .env, set your API key
 
-# 2. 启动
+# 2. Run
 docker compose up -d
 
-# 查看日志
-docker compose logs -f
+# 3. Open http://localhost:8000
 ```
 
-访问 http://localhost:8000
-
-### 手动安装
+### Local Development
 
 ```bash
-# 1. 安装依赖
+# Install dependencies
 uv sync
-cd frontend && pnpm install
 
-# 2. 构建前端
-cd frontend && pnpm build
+# Build frontend
+cd frontend && npm install && npm run build && cd ..
 
-# 3. 启动服务
-uvicorn app.main:app --reload
+# Run
+uv run uvicorn app.main:app --reload
 
-# 4. 启动 scheduler（可选，用于定时采集）
-python -m scheduler.panel_scheduler
+# Run scheduler (separate terminal)
+uv run python -m scheduler.panel_scheduler
 ```
 
-## Docker 配置
-
-### 环境变量
-
-| 变量 | 说明 | 示例 |
-|------|------|------|
-| `PI_PROVIDER` | LLM 提供商 | `anthropic`, `openai`, `google` |
-| `PI_MODEL` | 默认模型 | `claude-sonnet-4-20250514` |
-| `ANTHROPIC_API_KEY` | Anthropic API Key | `sk-ant-...` |
-| `OPENAI_API_KEY` | OpenAI API Key | `sk-...` |
-| `GEMINI_API_KEY` | Google API Key | |
-| `OPENROUTER_API_KEY` | OpenRouter API Key | `sk-or-...` |
-
-### 自定义 Provider（代理/自部署）
-
-```bash
-# .env
-PI_CUSTOM_BASE_URL=https://your-proxy.com/v1
-PI_CUSTOM_PROVIDER=my-proxy
-PI_CUSTOM_API=openai-completions
-PI_CUSTOM_API_KEY_ENV=CUSTOM_API_KEY
-CUSTOM_API_KEY=your-key
-PI_PROVIDER=my-proxy
-```
-
-### 数据持久化
-
-```yaml
-# docker-compose.yml - 使用本地目录
-volumes:
-  - ./data:/app/data
-```
-
-## Panel 系统
-
-每个 Panel 是独立目录：
+## Panel Architecture
 
 ```
-data/panels/{panel_id}/
-├── facade.html   # 外观 (HTML + Alpine.js)
-├── data.json     # 数据和配置
-└── handler.py    # 后端逻辑 (可选)
+data/panels/{panel-id}/
+├── data.json      # Panel data & metadata
+├── facade.html    # Alpine.js template (reads from API)
+└── handler.py     # Optional: @scheduled tasks, handle_action
 ```
 
-### Handler 模式
-
-handler.py 支持两种触发：
-
+**Handler Example:**
 ```python
-# HTTP 触发（用户交互）
-async def handle_action(action: str, payload: dict, data: dict) -> dict:
-    pass
+from scheduler.decorators import scheduled
 
-# Scheduler 触发（定时采集）
-async def collect(data: dict) -> dict:
-    # 调用外部 API、爬取数据等
+@scheduled("0 * * * *")  # Every hour
+async def refresh_data(data: dict) -> dict:
+    # Fetch external data
+    data["value"] = await fetch_api()
     return data
 ```
 
-定时采集需要在 data.json 设置 `schedule`（cron）：
-```json
-{"schedule": "*/30 * * * *"}
+**Facade Example:**
+```html
+<div x-data="myPanel()" x-init="init()">
+  <span x-text="data.value"></span>
+</div>
+<script>
+window.myPanel = () => ({
+  data: {},
+  async init() {
+    const res = await fetch('/api/panels/__PANEL_ID__/data');
+    this.data = await res.json();
+  }
+});
+</script>
 ```
 
-### API
+## Environment Variables
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/panels` | 列出所有 panel |
-| POST | `/api/panels` | 创建 panel |
-| GET | `/api/panels/{id}` | 获取 panel |
-| PATCH | `/api/panels/{id}` | 更新 panel |
-| DELETE | `/api/panels/{id}` | 删除 panel |
-| PATCH | `/api/panels/{id}/data` | 更新数据 |
-| POST | `/api/panels/{id}/action` | 调用 handle_action |
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `PI_PROVIDER` | Default provider (anthropic/openai/custom) |
+| `PI_MODEL` | Default model |
 
-### 创建 Panel 示例
+See `.env.example` for custom provider setup.
 
-```bash
-curl -X POST http://localhost:8000/api/panels \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "天气",
-    "desc": "显示实时天气",
-    "icon": "cloud-sun",
-    "headerColor": "cyan",
-    "facade": "<div>...</div>",
-    "handler": "async def collect(data): ...",
-    "schedule": "*/30 * * * *",
-    "size": "3x3"
-  }'
-```
+## License
 
-## 目录结构
-
-```
-├── app/                  # FastAPI 后端
-│   ├── routes/           # API 路由
-│   ├── services/         # 业务逻辑
-│   └── templates/        # Jinja2 模板
-├── frontend/             # 前端 (Vite + Tailwind)
-├── data/
-│   ├── dashboard.json    # 布局信息
-│   └── panels/           # Panel 数据目录
-├── scheduler/            # 定时任务
-│   └── panel_scheduler.py
-├── skills/               # Agent Skills
-└── extensions/           # pi 扩展
-```
-
-## 开发
-
-```bash
-# 前端开发 (热重载)
-cd frontend && pnpm dev
-
-# 后端开发
-uvicorn app.main:app --reload
-
-# 定时采集
-python -m scheduler.panel_scheduler
-```
-
-## Skills
-
-- `skills/_system.md` - 系统提示词
-- `skills/panel_examples.md` - Panel 模板和示例
+MIT

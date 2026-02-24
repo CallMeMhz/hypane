@@ -1,5 +1,5 @@
 [project]
-name = "ai-dashboard"
+name = "hypane"
 version = "0.1.0"
 description = "AI-powered personal dashboard"
 requires-python = ">=3.12"
