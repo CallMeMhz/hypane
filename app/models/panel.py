@@ -17,7 +17,7 @@ class Panel:
     headerColor: str = "gray"  # Header color name
     desc: str = ""  # Description for AI
     size: str = "3x2"
-    position: dict = field(default_factory=lambda: {"x": 0, "y": 0})
+    minSize: str = "2x2"
     storage_ids: list[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
@@ -46,7 +46,7 @@ class Panel:
             "headerColor": self.headerColor,
             "desc": self.desc,
             "size": self.size,
-            "position": self.position,
+            "minSize": self.minSize,
             "storage_ids": self.storage_ids,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -61,7 +61,7 @@ class Panel:
             headerColor=d.get("headerColor", "gray"),
             desc=d.get("desc", ""),
             size=d.get("size", "3x2"),
-            position=d.get("position", {"x": 0, "y": 0}),
+            minSize=d.get("minSize", "2x2"),
             storage_ids=d.get("storage_ids", []),
             created_at=datetime.fromisoformat(d["created_at"]) if "created_at" in d else datetime.now(),
             updated_at=datetime.fromisoformat(d["updated_at"]) if "updated_at" in d else datetime.now(),

@@ -9,15 +9,27 @@ from app.sandbox import get_executor, HandlerContext, HandlerEvent, EventType
 from app.services.storage import load_storages_for_context, save_storages_from_context
 
 
+def _merge_layout(panel_dict: dict) -> dict:
+    """Merge dashboard layout position/size into panel dict."""
+    from app.services.dashboard import get_panel_layout
+    layout = get_panel_layout(panel_dict["id"])
+    if layout:
+        panel_dict["position"] = layout.get("position", {"x": 0, "y": 0})
+        panel_dict["size"] = layout.get("size", panel_dict.get("size", "3x2"))
+    else:
+        panel_dict["position"] = {"x": 0, "y": 0}
+    return panel_dict
+
+
 def list_panels() -> list[dict]:
-    """List all panels."""
-    return [p.to_dict() for p in Panel.list_all()]
+    """List all panels with layout positions."""
+    return [_merge_layout(p.to_dict()) for p in Panel.list_all()]
 
 
 def get_panel(panel_id: str) -> dict | None:
-    """Get panel by ID."""
+    """Get panel by ID with layout position."""
     p = Panel.load(panel_id)
-    return p.to_dict() if p else None
+    return _merge_layout(p.to_dict()) if p else None
 
 
 def create_panel(
@@ -27,6 +39,7 @@ def create_panel(
     headerColor: str = "gray",
     desc: str = "",
     size: str = "3x2",
+    minSize: str = "2x2",
     storage_ids: list[str] | None = None,
     template: str = "",
     handler: str = "",
@@ -39,6 +52,7 @@ def create_panel(
         headerColor=headerColor,
         desc=desc,
         size=size,
+        minSize=minSize,
         storage_ids=storage_ids or [],
     )
     p.save()
@@ -52,17 +66,28 @@ def create_panel(
 
 
 def update_panel(panel_id: str, updates: dict) -> dict | None:
-    """Update panel metadata."""
+    """Update panel metadata. Position/size changes sync to dashboard layout."""
+    from app.services.dashboard import update_panel_layout
+
     p = Panel.load(panel_id)
     if not p:
         return None
-    
-    for key in ["title", "icon", "headerColor", "desc", "size", "position", "storage_ids"]:
+
+    for key in ["title", "icon", "headerColor", "desc", "size", "minSize", "position", "storage_ids"]:
         if key in updates:
             setattr(p, key, updates[key])
-    
+
     p.save()
-    return p.to_dict()
+
+    # Sync position/size to dashboard layout
+    if "position" in updates or "size" in updates:
+        update_panel_layout(
+            panel_id,
+            position=updates.get("position"),
+            size=updates.get("size"),
+        )
+
+    return _merge_layout(p.to_dict())
 
 
 def delete_panel(panel_id: str) -> bool:

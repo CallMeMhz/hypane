@@ -157,6 +157,42 @@
   }
 }
 
+/* ===== Grid Dot Background (aligned to GridStack cells) ===== */
+.grid-stack {
+  --dot-size: 1px;
+  --dot-color: var(--kb-border);
+  --dot-glow: var(--kb-accent);
+  --mouse-x: -9999px;
+  --mouse-y: -9999px;
+}
+
+/* Base faint dots — one dot per cell corner */
+.grid-stack::before,
+.grid-stack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
+  /* Horizontal = column width (container / 12), Vertical = cellHeight (70px) */
+  background-size: calc(100% / 12) 70px;
+  background-position: 0 0;
+}
+
+/* Dim base layer */
+.grid-stack::before {
+  opacity: 0.3;
+}
+
+/* Bright layer — masked to mouse proximity */
+.grid-stack::after {
+  --dot-color: var(--dot-glow);
+  opacity: 0.7;
+  mask-image: radial-gradient(circle 180px at var(--mouse-x) var(--mouse-y), black, transparent);
+  -webkit-mask-image: radial-gradient(circle 180px at var(--mouse-x) var(--mouse-y), black, transparent);
+}
+
 /* GridStack theme overrides */
 .grid-stack {
   min-height: 400px;

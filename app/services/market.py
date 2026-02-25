@@ -166,6 +166,7 @@ def install_market_panel(
         headerColor=market_panel.get("headerColor", "gray"),
         desc=market_panel.get("description", ""),
         size=market_panel.get("defaultSize", "3x2"),
+        minSize=market_panel.get("minSize", "2x2"),
         storage_ids=actual_storage_ids,
         template=template,
         handler=handler,

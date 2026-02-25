@@ -5,7 +5,7 @@
   "icon": "hourglass",
   "headerColor": "orange",
   "defaultSize": "3x2",
-  "minSize": "2x2",
+  "minSize": "3x3",
   "keywords": ["countdown", "timer", "倒计时", "日期"],
   "storage_ids": ["countdown"],
   "defaultStorage": {

@@ -16,10 +16,19 @@ import 'gridstack/dist/gridstack.min.css'
 // Chat module
 import { registerChat } from './chat/index.js'
 
+// Debounced dashboard refresh — avoids rapid destroy/init when agent fires many panel_updates
+let _refreshTimer = null
+function debouncedDashboardRefresh() {
+  clearTimeout(_refreshTimer)
+  _refreshTimer = setTimeout(() => {
+    htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
+  }, 300)
+}
+
 registerChat(Alpine, {
   onToolEnd(tool, args) {
     if (['panel_create', 'panel_delete', 'panel_update', 'market_install'].includes(tool)) {
-      htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
+      debouncedDashboardRefresh()
     } else if (tool === 'storage_update' && args.storageId) {
       fetch('/api/panels').then(r => r.json()).then(panels => {
         panels.filter(p => p.storage_ids?.includes(args.storageId))

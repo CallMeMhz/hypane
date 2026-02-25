@@ -18,6 +18,7 @@ class PanelCreateRequest(BaseModel):
     headerColor: str = "gray"
     desc: str = ""
     size: str = "3x2"
+    minSize: str = "2x2"
     position: dict | None = None
     storage_ids: list[str] | None = None
     template: str = ""
@@ -30,6 +31,7 @@ class PanelUpdateRequest(BaseModel):
     headerColor: str | None = None
     desc: str | None = None
     size: str | None = None
+    minSize: str | None = None
     position: dict | None = None
     storage_ids: list[str] | None = None
 
@@ -100,6 +102,7 @@ async def create_panel(request: PanelCreateRequest):
         headerColor=request.headerColor,
         desc=request.desc,
         size=request.size,
+        minSize=request.minSize,
         storage_ids=request.storage_ids,
         template=request.template,
         handler=request.handler,
