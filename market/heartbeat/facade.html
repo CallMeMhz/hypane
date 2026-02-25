@@ -3,15 +3,15 @@
 {% set started = hb.get('started_at', '') %}
 {% set last = hb.get('last_beat', '') %}
 
-<div hx-get="/panels/{{ panel.id }}/content"
+<div class="h-full" hx-get="/panels/{{ panel.id }}/content"
      hx-trigger="every 5s"
      hx-target="closest .card-content"
      hx-swap="innerHTML">
-  <div class="flex items-center gap-3">
+  <div class="flex items-center justify-center gap-3 h-full">
     <div class="text-3xl font-mono font-bold" style="color: var(--kb-green, #50fa7b);">
       #{{ beat }}
     </div>
-    <div class="flex-1 text-xs" style="color: var(--kb-text-muted);">
+    <div class="text-xs" style="color: var(--kb-text-muted);">
       <div>{{ last[11:19] if last else '--:--:--' }}</div>
       <div style="color: var(--kb-text-ghost);">since {{ started[11:19] if started else '--' }}</div>
     </div>

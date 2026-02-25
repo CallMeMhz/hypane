@@ -51,6 +51,52 @@ def update_panel_layout(panel_id: str, position: dict = None, size: str = None) 
     return False
 
 
+def _parse_size(size_str: str) -> tuple[int, int]:
+    """Parse 'WxH' string into (w, h) tuple."""
+    if "x" in size_str:
+        parts = size_str.split("x")
+        return int(parts[0]), int(parts[1])
+    return 3, 2
+
+
+def _find_first_empty_slot(panels: list, size: str) -> dict:
+    """Scan the 12-column grid row by row to find the first slot that fits."""
+    cols = 12
+    new_w, new_h = _parse_size(size)
+
+    # Build a set of occupied cells
+    occupied = set()
+    max_y = 0
+    for p in panels:
+        pos = p.get("position", {})
+        px, py = pos.get("x", 0), pos.get("y", 0)
+        pw, ph = _parse_size(p.get("size", "3x2"))
+        for r in range(py, py + ph):
+            for c in range(px, px + pw):
+                occupied.add((c, r))
+        bottom = py + ph
+        if bottom > max_y:
+            max_y = bottom
+
+    # Scan row by row, column by column
+    for y in range(max_y + new_h + 1):
+        for x in range(cols - new_w + 1):
+            # Check if all cells for the new panel are free
+            fits = True
+            for r in range(y, y + new_h):
+                for c in range(x, x + new_w):
+                    if (c, r) in occupied:
+                        fits = False
+                        break
+                if not fits:
+                    break
+            if fits:
+                return {"x": x, "y": y}
+
+    # Fallback: place below everything
+    return {"x": 0, "y": max_y}
+
+
 def add_panel_to_layout(panel_id: str, position: dict = None, size: str = "3x2") -> None:
     """Add a panel to the layout."""
     layout = get_dashboard_layout()
@@ -59,20 +105,9 @@ def add_panel_to_layout(panel_id: str, position: dict = None, size: str = "3x2")
     # Assign order (append to end)
     max_order = max((p.get("order", 0) for p in panels), default=-1)
     
-    # Default position: find next available spot
+    # Default position: find first empty slot that fits the new panel
     if position is None:
-        max_y = 0
-        for p in panels:
-            pos = p.get("position", {})
-            panel_size = p.get("size", "3x2")
-            if "x" in panel_size:
-                h = int(panel_size.split("x")[1])
-            else:
-                h = 2
-            bottom = pos.get("y", 0) + h
-            if bottom > max_y:
-                max_y = bottom
-        position = {"x": 0, "y": max_y}
+        position = _find_first_empty_slot(panels, size)
     
     panels.append({
         "id": panel_id,

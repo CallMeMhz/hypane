@@ -213,21 +213,11 @@
 </div>
 
 <script>
-// Dot grid mouse glow — track mouse relative to grid container
-{
-  const grid = document.getElementById('dashboard-panels');
-  if (grid) {
-    grid.addEventListener('mousemove', (e) => {
-      const rect = grid.getBoundingClientRect();
-      grid.style.setProperty('--mouse-x', (e.clientX - rect.left) + 'px');
-      grid.style.setProperty('--mouse-y', (e.clientY - rect.top + grid.scrollTop) + 'px');
-    });
-    grid.addEventListener('mouseleave', () => {
-      grid.style.setProperty('--mouse-x', '-9999px');
-      grid.style.setProperty('--mouse-y', '-9999px');
-    });
-  }
-}
+// Dot grid mouse glow — track mouse across full page
+document.addEventListener('mousemove', (e) => {
+  document.body.style.setProperty('--mouse-x', e.clientX + 'px');
+  document.body.style.setProperty('--mouse-y', e.clientY + 'px');
+});
 
 function toggleTheme() {
   const html = document.documentElement;
