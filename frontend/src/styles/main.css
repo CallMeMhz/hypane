@@ -162,25 +162,25 @@ body {
   --dot-size: 1px;
   --dot-color: var(--kb-border);
   --dot-glow: var(--kb-accent);
-  --dot-grid-width: calc(12 * 70px + 11 * 8px);
-  --dot-cell-w: 70px;
+  --dot-cell-w: calc((12 * 70px + 11 * 8px) / 12);
   --dot-cell-h: 70px;
+  --dot-offset-y: 0px;
   --mouse-x: -9999px;
   --mouse-y: -9999px;
   position: relative;
 }
 
-/* Base faint dots — tiled across full page */
+/* Base faint dots — tiled across full page, aligned to grid */
 body::before,
 body::after {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: -1;
   background-image: radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
   background-size: var(--dot-cell-w) var(--dot-cell-h);
-  background-position: center top;
+  background-position: center var(--dot-offset-y);
 }
 
 /* Dim base layer */
