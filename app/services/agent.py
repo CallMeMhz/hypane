@@ -241,6 +241,9 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
                             display_args = {"storageId": tool_args["storageId"]}
                         elif "type" in tool_args:
                             display_args = {"type": tool_args["type"], "title": tool_args.get("title", "")}
+                    elif tool_name in ("storage_update", "storage_create"):
+                        if "storageId" in tool_args:
+                            display_args = {"storageId": tool_args["storageId"]}
                     
                     yield f"data: {json.dumps({'type': 'tool_start', 'tool': tool_name, 'args': display_args})}\n\n"
 
