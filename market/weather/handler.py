@@ -1,16 +1,32 @@
-from scheduler.decorators import scheduled
+"""Weather panel handler - fetch weather data from Open-Meteo."""
 import httpx
 from datetime import datetime
 
-@scheduled("0 * * * *")
-async def refresh_weather(data: dict) -> dict:
-    """每小时刷新天气数据"""
+
+def on_init(storage: dict) -> None:
+    """Called once when panel is installed - fetch initial weather data."""
+    _refresh_weather(storage)
+
+
+def on_action(action: str, payload: dict, storage: dict) -> None:
+    """Handle weather actions."""
+    if action == "refresh":
+        _refresh_weather(storage)
+
+
+def on_schedule(storage: dict) -> None:
+    """Scheduled refresh (called by task scheduler)."""
+    _refresh_weather(storage)
+
+
+def _refresh_weather(storage: dict) -> None:
+    """Fetch weather data from Open-Meteo API."""
+    weather = storage.get("weather", {})
+    lat = weather.get("latitude", 1.29)
+    lon = weather.get("longitude", 103.85)
     
-    lat = data.get("latitude", 1.29)
-    lon = data.get("longitude", 103.85)
-    
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.get(
+    with httpx.Client(timeout=30) as client:
+        resp = client.get(
             "https://api.open-meteo.com/v1/forecast",
             params={
                 "latitude": lat,
@@ -22,7 +38,7 @@ async def refresh_weather(data: dict) -> dict:
             }
         )
         resp.raise_for_status()
-        weather = resp.json()
+        data = resp.json()
     
     def get_icon(code):
         if code in [95, 96, 99]: return "⛈️"
@@ -33,7 +49,7 @@ async def refresh_weather(data: dict) -> dict:
         elif code in [3, 45, 48]: return "☁️"
         else: return "🌤️"
     
-    def get_cn(code):
+    def get_condition(code):
         if code in [95, 96, 99]: return "雷阵雨"
         elif code in [80, 81, 82]: return "阵雨"
         elif code in [61, 63, 65, 66, 67]: return "雨"
@@ -46,8 +62,8 @@ async def refresh_weather(data: dict) -> dict:
         else: return "多云"
     
     weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-    daily = weather["daily"]
-    current = weather["current"]
+    daily = data["daily"]
+    current = data["current"]
     
     days = []
     for i in range(len(daily["time"])):
@@ -59,11 +75,9 @@ async def refresh_weather(data: dict) -> dict:
             "icon": get_icon(code),
             "high": int(daily["temperature_2m_max"][i]),
             "low": int(daily["temperature_2m_min"][i]),
-            "condition": get_cn(code)
+            "condition": get_condition(code)
         })
     
-    data["temperature"] = f"{int(current['temperature_2m'])}°C"
-    data["condition"] = get_cn(current["weather_code"])
-    data["days"] = days
-    
-    return data
+    weather["temperature"] = f"{int(current['temperature_2m'])}°C"
+    weather["condition"] = get_condition(current["weather_code"])
+    weather["days"] = days

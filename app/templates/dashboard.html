@@ -254,6 +254,29 @@ const iconEmojis = {
   'default': '📦'
 };
 
+// Global panelAction function for template handlers
+async function panelAction(panelId, action, payload = {}) {
+  try {
+    const res = await fetch(`/api/panels/${panelId}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      // Directly replace panel content with returned HTML
+      const content = document.querySelector(`#panel-${panelId} .card-content`);
+      if (content && data.html) {
+        content.innerHTML = data.html;
+      }
+      return data;
+    }
+  } catch (e) {
+    console.error(`Panel action failed: ${panelId}/${action}`, e);
+  }
+}
+window.panelAction = panelAction;
+
 // Tasks Modal Alpine component
 document.addEventListener('alpine:init', () => {
   Alpine.data('tasksModal', () => ({

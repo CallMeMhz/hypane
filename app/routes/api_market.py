@@ -39,7 +39,7 @@ async def get_panel_template(panel_type: str):
 class InstallRequest(BaseModel):
     title: Optional[str] = None
     size: Optional[str] = None
-    data: Optional[dict] = None
+    storage: Optional[dict] = None  # storage overrides
 
 
 @router.post("/{panel_type}/install")
@@ -66,7 +66,7 @@ async def install_panel(panel_type: str, request: InstallRequest):
         panel_type=panel_type,
         panel_id=panel_id,
         title=title,
-        data_overrides=request.data,
+        storage_overrides=request.storage,
     )
     
     if not result:

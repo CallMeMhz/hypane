@@ -1,20 +1,16 @@
 {
   "id": "iframe",
   "name": "嵌入网页",
-  "description": "嵌入任意网页，适合展示外部工具、文档、仪表盘等",
+  "description": "嵌入任意网页",
   "icon": "globe",
   "headerColor": "blue",
   "defaultSize": "6x4",
   "minSize": "3x3",
-  "keywords": ["iframe", "embed", "网页", "嵌入", "外部"],
-  "configSchema": {
-    "url": {
-      "type": "string",
-      "label": "网页地址",
-      "required": true
+  "keywords": ["iframe", "embed", "网页", "嵌入"],
+  "storage_ids": ["iframe"],
+  "defaultStorage": {
+    "iframe": {
+      "url": ""
     }
-  },
-  "defaultData": {
-    "url": ""
   }
 }

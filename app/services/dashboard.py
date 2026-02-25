@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from app.config import DASHBOARD_FILE
-from app.services.panels import get_panel, get_panel_data, list_panels
+from app.models.panel import Panel
 
 
 def get_dashboard_layout() -> dict[str, Any]:
@@ -98,6 +98,24 @@ def remove_panel_from_layout(panel_id: str) -> bool:
     return False
 
 
+def update_panel_positions(updates: dict[str, dict]) -> None:
+    """
+    Batch update panel positions.
+    
+    Args:
+        updates: {panel_id: {"x": int, "y": int}, ...}
+    """
+    layout = get_dashboard_layout()
+    
+    for p in layout.get("panels", []):
+        panel_id = p.get("id")
+        if panel_id in updates:
+            pos = updates[panel_id]
+            p["position"] = {"x": pos["x"], "y": pos["y"]}
+    
+    save_dashboard_layout(layout)
+
+
 def get_dashboard(enrich: bool = True) -> dict[str, Any]:
     """
     Get full dashboard with panel data merged.
@@ -105,19 +123,20 @@ def get_dashboard(enrich: bool = True) -> dict[str, Any]:
     """
     layout = get_dashboard_layout()
     
-    # Build full panel list with data
+    # Build full panel list with data from Panel model
     panels = []
     for idx, panel_layout in enumerate(layout.get("panels", [])):
         panel_id = panel_layout.get("id")
-        panel_data = get_panel_data(panel_id)
+        panel = Panel.load(panel_id)
         
-        if panel_data:
-            panels.append({
-                **panel_data,
+        if panel:
+            panel_dict = panel.to_dict()
+            panel_dict.update({
                 "position": panel_layout.get("position", {"x": 0, "y": 0}),
-                "size": panel_layout.get("size", "3x2"),
+                "size": panel_layout.get("size", panel.size or "3x2"),
                 "order": panel_layout.get("order", idx),
             })
+            panels.append(panel_dict)
     
     # Sort by order
     panels.sort(key=lambda p: p.get("order", 0))

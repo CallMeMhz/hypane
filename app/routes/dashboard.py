@@ -4,34 +4,31 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import TEMPLATES_DIR
 from app.services.dashboard import get_dashboard
-from app.services.panels import get_panel_facade, get_panel_data
+from app.services import panels_v2
 from app.services.panel_theme import get_icon_svg, get_color, DEFAULT_COLOR, DEFAULT_ICON
 
 router = APIRouter()
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 
-def enrich_panels_with_facade(panels: list) -> list:
-    """Add facade HTML, icon, and color to each panel."""
+def enrich_panels_for_render(panels: list) -> list:
+    """Add rendered template, icon SVG, and color to each panel."""
     enriched = []
     for panel in panels:
         panel_id = panel.get("id")
         
-        # Get facade
-        facade = get_panel_facade(panel_id)
-        
-        # Get panel data for headerColor and icon
-        data = get_panel_data(panel_id) or {}
-        header_color = data.get("headerColor", DEFAULT_COLOR)
-        icon_name = data.get("icon", DEFAULT_ICON)
+        # Render panel template via panels_v2
+        rendered_html = panels_v2.render_panel(panel_id) or ""
         
         # Get icon and color
+        icon_name = panel.get("icon", DEFAULT_ICON)
+        header_color = panel.get("headerColor", DEFAULT_COLOR)
         icon_svg = get_icon_svg(icon_name)
         color_value = get_color(header_color)
         
         enriched.append({
             **panel,
-            "facade": facade,
+            "facade": rendered_html,  # Rendered Jinja2 template
             "iconSvg": icon_svg,
             "headerColor": header_color,
             "headerColorValue": color_value,
@@ -43,7 +40,7 @@ def enrich_panels_with_facade(panels: list) -> list:
 async def index(request: Request):
     """Render the main dashboard page."""
     dashboard = get_dashboard()
-    panels = enrich_panels_with_facade(dashboard.get("panels", []))
+    panels = enrich_panels_for_render(dashboard.get("panels", []))
     
     return templates.TemplateResponse(
         "dashboard.html",
@@ -59,7 +56,7 @@ async def index(request: Request):
 async def dashboard_panels(request: Request):
     """Return just the panels HTML for HTMX refresh."""
     dashboard = get_dashboard()
-    panels = enrich_panels_with_facade(dashboard.get("panels", []))
+    panels = enrich_panels_for_render(dashboard.get("panels", []))
     
     return templates.TemplateResponse(
         "partials/panels_grid.html",

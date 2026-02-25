@@ -1,371 +1,213 @@
-"""Panel API routes."""
-
-import json
-from datetime import datetime, timezone
-from typing import Any, Optional
+"""Panel API routes - v2 with storage binding."""
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.services.panels import (
-    create_panel,
-    delete_panel,
-    get_panel,
-    get_panel_data,
-    get_panel_facade,
-    save_panel_data,
-    save_panel_facade,
-    save_panel_handler,
-    invoke_handler,
-    update_panel_data,
-    panel_exists,
-)
-from app.services.dashboard import (
-    add_panel_to_layout,
-    remove_panel_from_layout,
-    update_panel_layout,
-    get_panel_layout,
-)
-from app.services.snapshots import create_snapshot
-from app.services.dashboard import get_dashboard, save_dashboard
+from app.services import panels_v2 as panels
+from app.services import storage as storage_service
 
 router = APIRouter(prefix="/api/panels", tags=["panels"])
 
 
 # === Request Models ===
 
-class CreatePanelRequest(BaseModel):
-    title: str
-    desc: Optional[str] = None  # Natural language description for agent
-    icon: Optional[str] = "box"  # Lucide icon name
-    headerColor: Optional[str] = "gray"  # Color preset name
-    facade: str  # HTML
-    data: Optional[dict] = None
-    handler: Optional[str] = None  # Python code
-    size: Optional[str] = "3x2"
-    position: Optional[dict] = None  # {x, y}
-    minSize: Optional[str] = None
+class PanelCreateRequest(BaseModel):
+    id: str | None = None
+    title: str = "Untitled"
+    icon: str = "cube"
+    headerColor: str = "gray"
+    desc: str = ""
+    size: str = "3x2"
+    position: dict | None = None
+    storage_ids: list[str] | None = None
+    template: str = ""
+    handler: str = ""
 
 
-class UpdatePanelRequest(BaseModel):
-    title: Optional[str] = None
-    desc: Optional[str] = None
-    icon: Optional[str] = None
-    headerColor: Optional[str] = None
-    facade: Optional[str] = None
-    data: Optional[dict] = None
-    handler: Optional[str] = None
-    size: Optional[str] = None
-    position: Optional[dict] = None
+class PanelUpdateRequest(BaseModel):
+    title: str | None = None
+    icon: str | None = None
+    headerColor: str | None = None
+    desc: str | None = None
+    size: str | None = None
+    position: dict | None = None
+    storage_ids: list[str] | None = None
 
 
 class PanelActionRequest(BaseModel):
     action: str
-    payload: Optional[dict] = None
+    payload: dict | None = None
 
 
-# === Endpoints ===
+# === Batch Position Update (must be before /{panel_id} routes) ===
 
-@router.get("")
-async def list_panels_api():
-    """List all panels with their data."""
-    dashboard = get_dashboard()
-    return dashboard.get("panels", [])
-
-
-@router.post("")
-async def create_panel_api(request: CreatePanelRequest):
-    """Create a new panel."""
-    # Prepare data with icon, headerColor, desc
-    panel_data = request.data or {}
-    panel_data["icon"] = request.icon or "box"
-    panel_data["headerColor"] = request.headerColor or "gray"
-    if request.desc:
-        panel_data["desc"] = request.desc
-    if request.minSize:
-        panel_data["minSize"] = request.minSize
-    
-    # Create panel
-    panel_id = create_panel(
-        title=request.title,
-        facade_html=request.facade,
-        data=panel_data,
-        handler_code=request.handler,
-    )
-    
-    # Add to layout
-    add_panel_to_layout(panel_id, request.position, request.size or "3x2")
-    
-    # Create snapshot
-    dashboard = get_dashboard()
-    create_snapshot(
-        dashboard,
-        action="create",
-        details=f"Created panel: {request.title}",
-        panel_id=panel_id,
-    )
-    
-    return get_panel(panel_id)
-
-
-@router.get("/{panel_id}")
-async def get_panel_api(panel_id: str):
-    """Get a panel by ID."""
-    panel = get_panel(panel_id)
-    if panel is None:
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    # Include layout info
-    layout = get_panel_layout(panel_id)
-    if layout:
-        panel["position"] = layout.get("position", {"x": 0, "y": 0})
-        panel["size"] = layout.get("size", "3x2")
-    
-    return panel
-
-
-@router.patch("/{panel_id}")
-async def update_panel_api(panel_id: str, request: UpdatePanelRequest):
-    """Update a panel."""
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    # Update data fields
-    updates = {}
-    if request.title is not None:
-        updates["title"] = request.title
-    if request.desc is not None:
-        updates["desc"] = request.desc
-    if request.icon is not None:
-        updates["icon"] = request.icon
-    if request.headerColor is not None:
-        updates["headerColor"] = request.headerColor
-    if request.data is not None:
-        updates.update(request.data)
-    
-    if updates:
-        update_panel_data(panel_id, updates)
-    
-    # Update facade
-    if request.facade is not None:
-        save_panel_facade(panel_id, request.facade)
-    
-    # Update handler
-    if request.handler is not None:
-        save_panel_handler(panel_id, request.handler)
-    
-    # Update layout
-    if request.position is not None or request.size is not None:
-        update_panel_layout(panel_id, request.position, request.size)
-    
-    # Snapshot
-    dashboard = get_dashboard()
-    panel_data = get_panel_data(panel_id)
-    create_snapshot(
-        dashboard,
-        action="update",
-        details=f"Updated panel: {panel_data.get('title', panel_id)}",
-        panel_id=panel_id,
-    )
-    
-    return get_panel(panel_id)
-
-
-@router.delete("/{panel_id}")
-async def delete_panel_api(panel_id: str):
-    """Delete a panel."""
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    panel_data = get_panel_data(panel_id)
-    title = panel_data.get("title", panel_id) if panel_data else panel_id
-    
-    # Remove from layout
-    remove_panel_from_layout(panel_id)
-    
-    # Delete panel files
-    delete_panel(panel_id)
-    
-    # Snapshot
-    dashboard = get_dashboard()
-    create_snapshot(
-        dashboard,
-        action="delete",
-        details=f"Deleted panel: {title}",
-        panel_id=panel_id,
-    )
-    
-    return {"success": True, "id": panel_id}
-
-
-@router.post("/{panel_id}/action")
-async def panel_action_api(panel_id: str, request: PanelActionRequest):
-    """
-    Execute a panel action via its handler.
-    """
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    result = await invoke_handler(panel_id, request.action, request.payload or {})
-    
-    if result is None:
-        # No handler or handler returned None - just return current data
-        data = get_panel_data(panel_id)
-        return {"success": True, "data": data}
-    
-    return {"success": True, "data": result}
-
-
-# === Facade/Data/Handler specific endpoints ===
-
-@router.get("/{panel_id}/facade")
-async def get_facade_api(panel_id: str):
-    """Get panel facade HTML."""
-    facade = get_panel_facade(panel_id)
-    if facade is None:
-        raise HTTPException(status_code=404, detail="Panel or facade not found")
-    return {"facade": facade}
-
-
-@router.put("/{panel_id}/facade")
-async def update_facade_api(panel_id: str, body: dict):
-    """Update panel facade HTML."""
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    facade = body.get("facade", "")
-    save_panel_facade(panel_id, facade)
-    return {"success": True}
-
-
-@router.get("/{panel_id}/data")
-async def get_data_api(panel_id: str):
-    """Get panel data."""
-    data = get_panel_data(panel_id)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Panel not found")
-    return data
-
-
-@router.patch("/{panel_id}/data")
-async def update_data_api(panel_id: str, body: dict):
-    """Update panel data (merge)."""
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    result = update_panel_data(panel_id, body)
-    return result
-
-
-@router.put("/{panel_id}/handler")
-async def update_handler_api(panel_id: str, body: dict):
-    """Update panel handler code."""
-    if not panel_exists(panel_id):
-        raise HTTPException(status_code=404, detail="Panel not found")
-    
-    code = body.get("handler", "")
-    save_panel_handler(panel_id, code)
-    return {"success": True}
-
-
-# === Batch Position Update ===
-
-class PanelPosition(BaseModel):
-    id: str
-    position: dict
-
-
-class UpdatePositionsRequest(BaseModel):
-    panels: list[PanelPosition]
-
-
-@router.post("/positions")
-async def update_panel_positions(request: UpdatePositionsRequest):
-    """Batch update panel positions."""
-    for item in request.panels:
-        update_panel_layout(item.id, position=item.position)
-    
-    return {"success": True, "updated": len(request.panels)}
-
-
-# === Batch Order Update ===
-
-class PanelOrder(BaseModel):
-    id: str
-    order: int
-
-
-class UpdateOrderRequest(BaseModel):
-    panels: list[PanelOrder]
-
-
-@router.post("/order")
-async def update_panel_order(request: UpdateOrderRequest):
-    """Batch update panel order."""
-    from app.services.dashboard import get_dashboard_layout, save_dashboard_layout
-    
-    layout = get_dashboard_layout()
-    panels = layout.get("panels", [])
-    
-    # Create lookup
-    order_map = {item.id: item.order for item in request.panels}
-    
-    # Update order for each panel
-    for panel in panels:
-        panel_id = panel.get("id", "")
-        # Strip panel- prefix if present
-        clean_id = panel_id.replace("panel-", "") if panel_id.startswith("panel-") else panel_id
-        
-        if panel_id in order_map:
-            panel["order"] = order_map[panel_id]
-        elif clean_id in order_map:
-            panel["order"] = order_map[clean_id]
-    
-    # Sort panels by order
-    panels.sort(key=lambda p: p.get("order", 0))
-    
-    # Save
-    layout["panels"] = panels
-    save_dashboard_layout(layout)
-    
-    return {"success": True, "updated": len(request.panels)}
-
-
-# === Batch Position Update ===
-
-class PanelPositionUpdate(BaseModel):
+class PositionUpdate(BaseModel):
     id: str
     x: int
     y: int
 
 
-class UpdatePositionsRequest(BaseModel):
-    panels: list[PanelPositionUpdate]
+class PositionsUpdateRequest(BaseModel):
+    panels: list[PositionUpdate]
 
 
 @router.post("/positions")
-async def update_panel_positions(request: UpdatePositionsRequest):
-    """Batch update panel positions."""
-    from app.services.dashboard import get_dashboard_layout, save_dashboard_layout
+async def update_positions(request: PositionsUpdateRequest):
+    """Batch update panel positions after drag/resize."""
+    from app.services.dashboard import update_panel_positions
     
-    layout = get_dashboard_layout()
-    panels = layout.get("panels", [])
+    updates = {p.id: {"x": p.x, "y": p.y} for p in request.panels}
+    update_panel_positions(updates)
     
-    # Create lookup
-    pos_map = {item.id: {"x": item.x, "y": item.y} for item in request.panels}
+    return {"success": True}
+
+
+# === Panel CRUD ===
+
+@router.get("")
+async def list_panels():
+    """List all panels."""
+    return panels.list_panels()
+
+
+@router.get("/{panel_id}")
+async def get_panel(panel_id: str):
+    """Get panel metadata."""
+    p = panels.get_panel(panel_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return p
+
+
+@router.post("")
+async def create_panel(request: PanelCreateRequest):
+    """Create a new panel."""
+    from datetime import datetime
+    from app.services.dashboard import add_panel_to_layout
     
-    # Update position for each panel
-    for panel in panels:
-        panel_id = panel.get("id", "")
-        # Strip panel- prefix if present
-        clean_id = panel_id.replace("panel-", "") if panel_id.startswith("panel-") else panel_id
-        
-        if panel_id in pos_map:
-            panel["position"] = pos_map[panel_id]
-        elif clean_id in pos_map:
-            panel["position"] = pos_map[clean_id]
+    # Generate ID if not provided
+    panel_id = request.id or f"panel-{datetime.now().strftime('%Y%m%d%H%M%S')}"
     
-    # Save
-    save_dashboard_layout(layout)
+    # Create any storage that doesn't exist yet
+    for sid in (request.storage_ids or []):
+        if not storage_service.get_storage(sid):
+            storage_service.create_storage(sid, {})
     
-    return {"success": True, "updated": len(request.panels)}
+    p = panels.create_panel(
+        panel_id=panel_id,
+        title=request.title,
+        icon=request.icon,
+        headerColor=request.headerColor,
+        desc=request.desc,
+        size=request.size,
+        storage_ids=request.storage_ids,
+        template=request.template,
+        handler=request.handler,
+    )
+    
+    # Add to dashboard layout
+    add_panel_to_layout(panel_id, request.position, request.size or "3x2")
+    
+    return p
+
+
+@router.patch("/{panel_id}")
+async def update_panel(panel_id: str, request: PanelUpdateRequest):
+    """Update panel metadata."""
+    updates = {k: v for k, v in request.model_dump().items() if v is not None}
+    p = panels.update_panel(panel_id, updates)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return p
+
+
+@router.delete("/{panel_id}")
+async def delete_panel(panel_id: str):
+    """Delete a panel."""
+    from app.services.dashboard import remove_panel_from_layout
+    
+    if not panels.delete_panel(panel_id):
+        raise HTTPException(status_code=404, detail="Panel not found")
+    
+    # Remove from layout
+    remove_panel_from_layout(panel_id)
+    
+    return {"success": True}
+
+
+# === Template & Handler ===
+
+@router.get("/{panel_id}/template")
+async def get_template(panel_id: str):
+    """Get panel template."""
+    from app.models.panel import Panel
+    p = Panel.load(panel_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return {"template": p.get_template()}
+
+
+@router.put("/{panel_id}/template")
+async def update_template(panel_id: str, body: dict):
+    """Update panel template."""
+    from app.models.panel import Panel
+    p = Panel.load(panel_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    p.set_template(body.get("template", ""))
+    return {"success": True}
+
+
+@router.get("/{panel_id}/handler")
+async def get_handler(panel_id: str):
+    """Get panel handler code."""
+    from app.models.panel import Panel
+    p = Panel.load(panel_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return {"handler": p.get_handler()}
+
+
+@router.put("/{panel_id}/handler")
+async def update_handler(panel_id: str, body: dict):
+    """Update panel handler code."""
+    from app.models.panel import Panel
+    p = Panel.load(panel_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    p.set_handler(body.get("handler", ""))
+    return {"success": True}
+
+
+# === Render & Action ===
+
+@router.get("/{panel_id}/render")
+async def render_panel(panel_id: str):
+    """Render panel template with storage context."""
+    html = panels.render_panel(panel_id)
+    if html is None:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return {"html": html}
+
+
+@router.post("/{panel_id}/action")
+async def execute_action(panel_id: str, request: PanelActionRequest):
+    """
+    Execute panel handler action.
+    
+    Handler receives: on_action(action, payload, storage)
+    Storage is modified in-place, then saved.
+    Returns re-rendered panel HTML with HX-Trigger to refresh panel.
+    """
+    from fastapi.responses import JSONResponse
+    
+    result = panels.execute_action(panel_id, request.action, request.payload)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    
+    # Return with HX-Trigger header to refresh the panel
+    return JSONResponse(
+        content=result,
+        headers={"HX-Trigger": f"refresh-{panel_id}"}
+    )

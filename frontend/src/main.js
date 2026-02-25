@@ -78,12 +78,7 @@ function isMobile() {
 
 // Calculate available columns based on container width
 function calculateCols() {
-  const grid = document.getElementById('dashboard-panels')
-  if (!grid) return MIN_COLS
-  
-  const containerWidth = grid.parentElement.clientWidth - 16 // padding
-  const cols = Math.floor((containerWidth + GRID_GAP) / (CELL_SIZE + GRID_GAP))
-  return Math.max(MIN_COLS, cols)
+  return 12  // Fixed 12 columns
 }
 
 // Build grid state from DOM
@@ -241,11 +236,18 @@ function applyPositions() {
   grid.style.minHeight = (maxBottom + 50) + 'px'
 }
 
-// Full reflow
+// Full reflow (compact all cards)
 function reflow() {
   if (isMobile()) return
   buildGridState()
   compactCards()
+  applyPositions()
+}
+
+// Just apply current positions from data attributes (no compacting)
+function initPositions() {
+  if (isMobile()) return
+  buildGridState()
   applyPositions()
 }
 
@@ -484,10 +486,9 @@ function initCardResize() {
       
       if (newW !== panelState.w || newH !== panelState.h) {
         updateCardSize(newW, newH)
-        if (autoCompact) {
-          compactCards()
-          applyPositions()
-        }
+        // Push away overlapping panels
+        pushAwayCards(card.id)
+        applyPositions()
       }
     }
     
@@ -500,7 +501,7 @@ function initCardResize() {
       card.style.transition = ''
       card.style.zIndex = ''
       
-      // Save size
+      // Save size and positions (other panels may have been pushed)
       const newSize = `${panelState.w}x${panelState.h}`
       try {
         await fetch(`/api/panels/${cardId}`, {
@@ -508,8 +509,9 @@ function initCardResize() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ size: newSize })
         })
+        await savePositions()
       } catch (e) {
-        console.error('Failed to save size:', e)
+        console.error('Failed to save size/positions:', e)
       }
     }
     
@@ -521,7 +523,7 @@ function initCardResize() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   if (!isMobile()) {
-    reflow()
+    initPositions()  // Just apply saved positions, don't compact
   }
   initCardDrag()
   initCardResize()
@@ -530,17 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.setAutoCompact = (value) => { autoCompact = !!value }
   window.getAutoCompact = () => autoCompact
   window.compactAll = () => { buildGridState(); compactCards(); applyPositions(); savePositions() }
-})
-
-// Reflow on resize
-let resizeTimeout = null
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimeout)
-  resizeTimeout = setTimeout(() => {
-    if (!isMobile()) {
-      reflow()
-    }
-  }, 100)
 })
 
 // Reflow after HTMX swaps (new panels added)
@@ -836,6 +827,10 @@ Alpine.data('chatBox', () => ({
             toolDisplay += `: ${event.args.path}`
           } else if (event.args.cardId) {
             toolDisplay += `: ${event.args.cardId}`
+          } else if (event.args.panelId) {
+            toolDisplay += `: ${event.args.panelId}`
+          } else if (event.args.storageId) {
+            toolDisplay += `: ${event.args.storageId}`
           } else if (event.args.type) {
             toolDisplay += `: ${event.args.type}`
           }
@@ -843,7 +838,9 @@ Alpine.data('chatBox', () => ({
         this.messages.push({ 
           role: 'tool', 
           content: toolDisplay,
-          status: 'running'
+          status: 'running',
+          toolName: event.tool,
+          args: event.args || {}
         })
         this.scrollToBottom()
         break
@@ -852,15 +849,29 @@ Alpine.data('chatBox', () => ({
         for (let i = this.messages.length - 1; i >= 0; i--) {
           if (this.messages[i].role === 'tool' && this.messages[i].status === 'running') {
             this.messages[i].status = event.isError ? 'error' : 'done'
+            
+            // Refresh panels based on tool type
+            if (!event.isError) {
+              const tool = this.messages[i].toolName
+              const args = this.messages[i].args
+              
+              if (tool === 'panel_create' || tool === 'panel_delete' || tool === 'market_install') {
+                // Full dashboard refresh for panel add/remove
+                this.refreshDashboard()
+              } else if (tool === 'panel_update' && args.panelId) {
+                // Refresh specific panel
+                this.refreshPanel(args.panelId)
+              } else if (tool === 'storage_update' && args.storageId) {
+                // Refresh panels that use this storage
+                this.refreshPanelsByStorage(args.storageId)
+              }
+            }
             break
           }
         }
         break
         
       case 'done':
-        if (event.dashboardUpdated) {
-          this.refreshDashboard()
-        }
         break
         
       case 'error':
@@ -871,6 +882,29 @@ Alpine.data('chatBox', () => ({
 
   refreshDashboard() {
     htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
+  },
+
+  refreshPanel(panelId) {
+    const panel = document.querySelector(`[data-panel-id="${panelId}"] .card-content`)
+    if (panel) {
+      htmx.ajax('GET', `/panels/${panelId}/content`, { target: panel, swap: 'innerHTML' })
+    }
+  },
+
+  async refreshPanelsByStorage(storageId) {
+    // Find panels that use this storage by checking dashboard
+    try {
+      const res = await fetch('/api/panels')
+      const panels = await res.json()
+      for (const panel of panels) {
+        if (panel.storage_ids && panel.storage_ids.includes(storageId)) {
+          this.refreshPanel(panel.id)
+        }
+      }
+    } catch (e) {
+      // Fallback to full refresh
+      this.refreshDashboard()
+    }
   },
 
   scrollToBottom() {

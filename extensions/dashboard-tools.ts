@@ -1,10 +1,10 @@
 /**
  * Dashboard Tools Extension
  * 
- * Panel 管理工具。每个 Panel 是独立目录：
- * - facade.html (外观)
- * - data.json (数据)  
- * - handler.py (后端逻辑，可选)
+ * Panel 管理工具 (v2 架构):
+ * - template.html (Jinja2 模板)
+ * - handler.py (Python handler with on_action)
+ * - storage_ids (绑定的 storage 列表)
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -34,7 +34,8 @@ export default function (pi: ExtensionAPI) {
             const pos = p.position || {};
             const posStr = pos.x !== undefined ? `@(${pos.x},${pos.y})` : '';
             const desc = p.desc ? ` - ${p.desc}` : '';
-            return `- [${p.id}] ${p.size || '3x2'} ${posStr}: ${p.title || "(no title)"}${desc}`;
+            const storages = p.storage_ids?.length ? ` [storages: ${p.storage_ids.join(', ')}]` : '';
+            return `- [${p.id}] ${p.size || '3x2'} ${posStr}: ${p.title || "(no title)"}${desc}${storages}`;
           })
           .join("\n");
 
@@ -52,20 +53,50 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "panel_get",
     label: "Get Panel",
-    description: "Get full details of a panel (data + facade).",
+    description: "Get full details of a panel (metadata + template + handler + storage data).",
     parameters: Type.Object({
       panelId: Type.String({ description: "Panel ID" }),
     }),
 
     async execute(_toolCallId: string, params: { panelId: string }) {
       try {
-        const response = await fetch(`${DASHBOARD_API}/api/panels/${params.panelId}`);
-        if (!response.ok) {
+        const [metaRes, templateRes, handlerRes] = await Promise.all([
+          fetch(`${DASHBOARD_API}/api/panels/${params.panelId}`),
+          fetch(`${DASHBOARD_API}/api/panels/${params.panelId}/template`),
+          fetch(`${DASHBOARD_API}/api/panels/${params.panelId}/handler`),
+        ]);
+        
+        if (!metaRes.ok) {
           return { content: [{ type: "text", text: `Panel not found: ${params.panelId}` }] };
         }
-        const panel = await response.json();
+        
+        const meta = await metaRes.json();
+        const { template } = await templateRes.json();
+        const { handler } = await handlerRes.json();
+        
+        // Also fetch storage data for each storage_id
+        const storageData: Record<string, any> = {};
+        for (const sid of meta.storage_ids || []) {
+          try {
+            const storageRes = await fetch(`${DASHBOARD_API}/api/storages/${sid}`);
+            if (storageRes.ok) {
+              const s = await storageRes.json();
+              storageData[sid] = s.data;  // Just the data, not the full storage object
+            }
+          } catch {}
+        }
+        
+        const panel = { ...meta, template, handler, storageData };
+        
+        // Format output to highlight storage IDs
+        const storageInfo = meta.storage_ids?.length 
+          ? `\n\nSTORAGE (use these IDs with storage_update):\n${meta.storage_ids.map((sid: string) => 
+              `  - ${sid}: ${JSON.stringify(storageData[sid] || {})}`
+            ).join('\n')}`
+          : '';
+        
         return {
-          content: [{ type: "text", text: `Panel ${params.panelId}:\n${JSON.stringify(panel, null, 2)}` }],
+          content: [{ type: "text", text: `Panel ${params.panelId}:${storageInfo}\n\nMETADATA: ${JSON.stringify(meta, null, 2)}\n\nTEMPLATE:\n${template}\n\nHANDLER:\n${handler}` }],
           details: { panel },
         };
       } catch (error) {
@@ -78,44 +109,42 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "panel_create",
     label: "Create Panel",
-    description: `Create a new panel.
+    description: `Create a new panel with Jinja2 template and Python handler.
 
-Each panel has:
-- facade: HTML content (Tailwind CSS + Alpine.js)
-- data: JSON data (includes icon, headerColor, desc, etc.)
-- handler: Python code (optional, for action and/or scheduled tasks)
+**Architecture:**
+- template: Jinja2 HTML, renders with \`panel\` (metadata) and \`storage\` (dict of bound storages)
+- handler: Python with \`on_action(action: str, payload: dict, storage: dict)\`
+- storage_ids: List of storage IDs this panel can access
 
-Handler example with scheduled task:
-\`\`\`python
-from scheduler.decorators import scheduled
-
-@scheduled("*/30 * * * *")  # every 30 min
-async def collect(data: dict) -> dict:
-    # fetch data, update panel
-    return data
-
-async def handle_action(action: str, payload: dict, data: dict) -> dict:
-    # handle user interaction
-    return data
+**Template example (interactive):**
+\`\`\`html
+<div class="h-full flex flex-col items-center justify-center">
+  <span class="text-6xl cursor-pointer" onclick="panelAction('{{ panel.id }}', 'click', {})">🍪</span>
+  <div class="text-2xl font-bold">{{ storage['cookies']['count'] }}</div>
+</div>
 \`\`\`
 
-Size format: "WxH" (e.g., "3x2", "4x3"). Each unit is 70px.
-Use __PANEL_ID__ placeholder in facade - it will be replaced with actual ID.
+**Handler example:**
+\`\`\`python
+def on_action(action: str, payload: dict, storage: dict) -> None:
+    if action == "click":
+        cookies = storage.get("cookies", {})
+        cookies["count"] = cookies.get("count", 0) + 1
+\`\`\`
 
-Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink, rose
-Icons: check-square, hourglass, bell, calendar, cloud-sun, coins, newspaper, cookie, star, heart, code, box, etc.
+**panelAction(panelId, action, payload)** - Call this to trigger handler and refresh panel.
 
-See skills/panel_examples.md for full list and examples.`,
+Icons: check-square, cookie, cloud, globe, calendar, clock, bell, coins, newspaper, star, heart, code, box
+Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink, rose`,
     parameters: Type.Object({
-      title: Type.String({ description: "Panel title (no emoji)" }),
-      desc: Type.Optional(Type.String({ description: "Natural language description of what this panel does (helps agent understand)" })),
-      icon: Type.String({ description: "Icon name (e.g. check-square, bell, newspaper)" }),
-      headerColor: Type.String({ description: "Color name (e.g. teal, amber, indigo)" }),
-      facade: Type.String({ description: "HTML content (Tailwind CSS + Alpine.js)" }),
-      data: Type.Optional(Type.Object({}, { additionalProperties: true })),
-      handler: Type.Optional(Type.String({ description: "Python handler code with @scheduled decorator and/or handle_action()" })),
+      title: Type.String({ description: "Panel title" }),
+      desc: Type.Optional(Type.String({ description: "Description for AI reference" })),
+      icon: Type.String({ description: "Lucide icon name" }),
+      headerColor: Type.Optional(Type.String({ description: "Header color name" })),
       size: Type.Optional(Type.String({ description: 'Grid size "WxH", default "3x2"' })),
-      minSize: Type.Optional(Type.String({ description: 'Minimum size "WxH"' })),
+      storage_ids: Type.Optional(Type.Array(Type.String(), { description: "Storage IDs to bind" })),
+      template: Type.String({ description: "Jinja2 HTML template" }),
+      handler: Type.Optional(Type.String({ description: "Python handler with on_action()" })),
       position: Type.Optional(Type.Object({
         x: Type.Number({ description: "Column (0-indexed)" }),
         y: Type.Number({ description: "Row (0-indexed)" }),
@@ -127,11 +156,20 @@ See skills/panel_examples.md for full list and examples.`,
         const response = await fetch(`${DASHBOARD_API}/api/panels`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
+          body: JSON.stringify({
+            title: params.title,
+            desc: params.desc,
+            icon: params.icon,
+            size: params.size || "3x2",
+            storage_ids: params.storage_ids || [],
+            template: params.template,
+            handler: params.handler || "",
+            position: params.position,
+          }),
         });
         const panel = await response.json();
         return {
-          content: [{ type: "text", text: `Created panel: ${panel.id} (${panel.type}) size=${panel.size}` }],
+          content: [{ type: "text", text: `Created panel: ${panel.id} (${panel.size})` }],
           details: { panel },
         };
       } catch (error) {
@@ -144,14 +182,16 @@ See skills/panel_examples.md for full list and examples.`,
   pi.registerTool({
     name: "panel_update",
     label: "Update Panel",
-    description: `Update a panel's facade, data, handler, or layout.`,
+    description: `Update a panel's metadata, template, or handler.`,
     parameters: Type.Object({
       panelId: Type.String({ description: "Panel ID" }),
       title: Type.Optional(Type.String({ description: "New title" })),
-      facade: Type.Optional(Type.String({ description: "New facade HTML" })),
-      data: Type.Optional(Type.Object({}, { additionalProperties: true })),
-      handler: Type.Optional(Type.String({ description: "New handler code" })),
+      desc: Type.Optional(Type.String({ description: "New description" })),
+      icon: Type.Optional(Type.String({ description: "New icon" })),
       size: Type.Optional(Type.String({ description: 'Grid size "WxH"' })),
+      storage_ids: Type.Optional(Type.Array(Type.String(), { description: "New storage IDs" })),
+      template: Type.Optional(Type.String({ description: "New Jinja2 template" })),
+      handler: Type.Optional(Type.String({ description: "New Python handler" })),
       position: Type.Optional(Type.Object({
         x: Type.Number({ description: "Column" }),
         y: Type.Number({ description: "Row" }),
@@ -159,23 +199,37 @@ See skills/panel_examples.md for full list and examples.`,
     }),
 
     async execute(_toolCallId: string, params: { panelId: string; [key: string]: any }) {
-      const { panelId, ...updates } = params;
+      const { panelId, template, handler, ...updates } = params;
       try {
-        const response = await fetch(`${DASHBOARD_API}/api/panels/${panelId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error: ${error}` }] };
+        // Update metadata
+        if (Object.keys(updates).length > 0) {
+          await fetch(`${DASHBOARD_API}/api/panels/${panelId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          });
+        }
+        
+        // Update template
+        if (template !== undefined) {
+          await fetch(`${DASHBOARD_API}/api/panels/${panelId}/template`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ template }),
+          });
+        }
+        
+        // Update handler
+        if (handler !== undefined) {
+          await fetch(`${DASHBOARD_API}/api/panels/${panelId}/handler`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ handler }),
+          });
         }
 
-        const panel = await response.json();
         return {
-          content: [{ type: "text", text: `Updated panel: ${panel.id}` }],
-          details: { panel },
+          content: [{ type: "text", text: `Updated panel: ${panelId}` }],
         };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${error}` }] };
@@ -187,7 +241,7 @@ See skills/panel_examples.md for full list and examples.`,
   pi.registerTool({
     name: "panel_delete",
     label: "Delete Panel",
-    description: "Delete a panel and all its files.",
+    description: "Delete a panel.",
     parameters: Type.Object({
       panelId: Type.String({ description: "Panel ID" }),
     }),
@@ -199,40 +253,11 @@ See skills/panel_examples.md for full list and examples.`,
         });
 
         if (!response.ok) {
-          const error = await response.text();
-          return { content: [{ type: "text", text: `Error: ${error}` }] };
+          return { content: [{ type: "text", text: `Panel not found: ${params.panelId}` }] };
         }
 
-        return { content: [{ type: "text", text: `Deleted panel: ${params.panelId}` }] };
-      } catch (error) {
-        return { content: [{ type: "text", text: `Error: ${error}` }] };
-      }
-    },
-  });
-
-  // Tool: Panel action
-  pi.registerTool({
-    name: "panel_action",
-    label: "Panel Action",
-    description: "Call a panel's handler with an action.",
-    parameters: Type.Object({
-      panelId: Type.String({ description: "Panel ID" }),
-      action: Type.String({ description: "Action name" }),
-      payload: Type.Optional(Type.Object({}, { additionalProperties: true })),
-    }),
-
-    async execute(_toolCallId: string, params: { panelId: string; action: string; payload?: any }) {
-      try {
-        const response = await fetch(`${DASHBOARD_API}/api/panels/${params.panelId}/action`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: params.action, payload: params.payload }),
-        });
-
-        const result = await response.json();
         return {
-          content: [{ type: "text", text: `Action ${params.action}: ${JSON.stringify(result)}` }],
-          details: { result },
+          content: [{ type: "text", text: `Deleted panel: ${params.panelId}` }],
         };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${error}` }] };
@@ -240,5 +265,115 @@ See skills/panel_examples.md for full list and examples.`,
     },
   });
 
-  console.error("[Dashboard Extension] Registered 6 panel tools");
+  // Tool: Storage CRUD
+  pi.registerTool({
+    name: "storage_list",
+    label: "List Storages",
+    description: "List all storages.",
+    parameters: Type.Object({}),
+
+    async execute() {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/storages`);
+        const storages = await response.json();
+
+        if (storages.length === 0) {
+          return { content: [{ type: "text", text: "No storages." }] };
+        }
+
+        const summary = storages
+          .map((s: any) => `- [${s.id}]: ${JSON.stringify(s.data).slice(0, 100)}...`)
+          .join("\n");
+
+        return {
+          content: [{ type: "text", text: `Storages:\n${summary}` }],
+          details: { storages },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "storage_get",
+    label: "Get Storage",
+    description: "Get storage data by ID.",
+    parameters: Type.Object({
+      storageId: Type.String({ description: "Storage ID" }),
+    }),
+
+    async execute(_toolCallId: string, params: { storageId: string }) {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/storages/${params.storageId}`);
+        if (!response.ok) {
+          return { content: [{ type: "text", text: `Storage not found: ${params.storageId}` }] };
+        }
+        const storage = await response.json();
+        return {
+          content: [{ type: "text", text: `Storage ${params.storageId}:\n${JSON.stringify(storage, null, 2)}` }],
+          details: { storage },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "storage_create",
+    label: "Create Storage",
+    description: "Create a new storage with initial data.",
+    parameters: Type.Object({
+      storageId: Type.String({ description: "Storage ID (use lowercase-hyphen format)" }),
+      data: Type.Optional(Type.Object({}, { additionalProperties: true, description: "Initial data" })),
+    }),
+
+    async execute(_toolCallId: string, params: { storageId: string; data?: object }) {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/storages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: params.storageId, data: params.data || {} }),
+        });
+        const storage = await response.json();
+        return {
+          content: [{ type: "text", text: `Created storage: ${storage.id}` }],
+          details: { storage },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
+
+  pi.registerTool({
+    name: "storage_update",
+    label: "Update Storage",
+    description: "Update storage data (shallow merge). Use panel_get to find the exact storage_ids for a panel.",
+    parameters: Type.Object({
+      storageId: Type.String({ description: "Storage ID (get from panel's storage_ids array)" }),
+      data: Type.Object({}, { additionalProperties: true, description: "Data to merge" }),
+    }),
+
+    async execute(_toolCallId: string, params: { storageId: string; data: object }) {
+      try {
+        const response = await fetch(`${DASHBOARD_API}/api/storages/${params.storageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: params.data }),
+        });
+        if (!response.ok) {
+          return { content: [{ type: "text", text: `Storage not found: ${params.storageId}` }] };
+        }
+        const storage = await response.json();
+        return {
+          content: [{ type: "text", text: `Updated storage: ${storage.id}` }],
+          details: { storage },
+        };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${error}` }] };
+      }
+    },
+  });
 }

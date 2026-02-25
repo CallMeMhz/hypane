@@ -1,27 +1,17 @@
 {
   "id": "countdown",
   "name": "倒计时",
-  "description": "显示距离目标日期的倒计时，支持自定义标题和日期",
+  "description": "显示距离目标日期的倒计时",
   "icon": "hourglass",
   "headerColor": "orange",
   "defaultSize": "3x2",
   "minSize": "2x2",
-  "keywords": ["countdown", "timer", "倒计时", "日期", "提醒"],
-  "configSchema": {
-    "targetDate": {
-      "type": "string",
-      "label": "目标日期",
-      "description": "格式: YYYY-MM-DD",
-      "required": true
-    },
-    "eventName": {
-      "type": "string",
-      "label": "事件名称",
-      "default": "目标日"
+  "keywords": ["countdown", "timer", "倒计时", "日期"],
+  "storage_ids": ["countdown"],
+  "defaultStorage": {
+    "countdown": {
+      "targetDate": "",
+      "eventName": "目标日"
     }
-  },
-  "defaultData": {
-    "targetDate": "",
-    "eventName": "目标日"
   }
 }

@@ -7,7 +7,10 @@
   "defaultSize": "3x4",
   "minSize": "3x3",
   "keywords": ["todo", "task", "待办", "任务", "清单", "checklist"],
-  "defaultData": {
-    "items": []
+  "storage_ids": ["todo"],
+  "defaultStorage": {
+    "todo": {
+      "items": []
+    }
   }
 }

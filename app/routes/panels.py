@@ -3,7 +3,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import TEMPLATES_DIR
-from app.services.panels import get_panel_facade, get_panel_data
+from app.models.panel import Panel
+from app.services import panels_v2
 from app.services.dashboard import get_panel_layout
 from app.services.panel_theme import get_icon_svg, get_color, DEFAULT_COLOR, DEFAULT_ICON
 
@@ -13,34 +14,45 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 @router.get("/panels/{panel_id}", response_class=HTMLResponse)
 async def render_panel(request: Request, panel_id: str):
-    """Render a single panel as HTML."""
-    panel_data = get_panel_data(panel_id)
-    if panel_data is None:
+    """Render a single panel as HTML (for HTMX refresh)."""
+    panel = Panel.load(panel_id)
+    if panel is None:
         return HTMLResponse(
             content=f'<div class="text-red-500">Panel not found: {panel_id}</div>',
             status_code=404
         )
     
-    facade = get_panel_facade(panel_id)
+    # Render template with storage context
+    rendered_html = panels_v2.render_panel(panel_id) or ""
+    
     layout = get_panel_layout(panel_id)
     
-    # Get icon and color from panel data
-    header_color = panel_data.get("headerColor", DEFAULT_COLOR)
-    icon_name = panel_data.get("icon", DEFAULT_ICON)
-    icon_svg = get_icon_svg(icon_name)
-    color_value = get_color(header_color)
+    # Get icon and color
+    icon_svg = get_icon_svg(panel.icon or DEFAULT_ICON)
+    color_value = get_color(panel.headerColor or DEFAULT_COLOR)
     
-    panel = {
-        **panel_data,
-        "facade": facade,
+    panel_dict = {
+        **panel.to_dict(),
+        "facade": rendered_html,
         "position": layout.get("position", {"x": 0, "y": 0}) if layout else {"x": 0, "y": 0},
-        "size": layout.get("size", "3x2") if layout else "3x2",
+        "size": layout.get("size", panel.size or "3x2") if layout else panel.size or "3x2",
         "iconSvg": icon_svg,
-        "headerColor": header_color,
         "headerColorValue": color_value,
     }
     
     return templates.TemplateResponse(
         "partials/panel.html",
-        {"request": request, "panel": panel}
+        {"request": request, "panel": panel_dict}
     )
+
+
+@router.get("/panels/{panel_id}/content", response_class=HTMLResponse)
+async def render_panel_content(panel_id: str):
+    """Render only panel content (for partial HTMX refresh)."""
+    rendered_html = panels_v2.render_panel(panel_id)
+    if rendered_html is None:
+        return HTMLResponse(
+            content='<div class="text-red-500">Panel not found</div>',
+            status_code=404
+        )
+    return HTMLResponse(content=rendered_html)

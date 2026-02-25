@@ -1,37 +1,20 @@
-<div x-data="posterPanel()" x-init="init()" class="h-full w-full">
-  <template x-if="imageUrl">
-    <a :href="linkUrl || '#'" :target="linkUrl ? '_blank' : '_self'" 
-       class="block h-full w-full" :class="{ 'cursor-default': !linkUrl }">
-      <img :src="imageUrl" :alt="alt" 
-           class="h-full w-full rounded"
-           :style="'object-fit: ' + fit">
-    </a>
-  </template>
-  <template x-if="!imageUrl">
-    <div class="h-full flex items-center justify-center text-gray-500 text-sm">
-      未配置图片
-    </div>
-  </template>
-</div>
+{% set data = storage.get('poster', {}) %}
+{% set image_url = data.get('imageUrl', '') %}
+{% set link_url = data.get('linkUrl', '') %}
+{% set alt = data.get('alt', '') %}
+{% set fit = data.get('fit', 'cover') %}
 
-<script>
-window.posterPanel = window.posterPanel || function() {
-  return {
-    imageUrl: '',
-    linkUrl: '',
-    alt: '',
-    fit: 'cover',
-    panelId: '',
-    
-    async init() {
-      this.panelId = this.$el.closest('[data-panel-id]').dataset.panelId;
-      const res = await fetch('/api/panels/' + this.panelId + '/data');
-      const data = await res.json();
-      this.imageUrl = data.imageUrl || '';
-      this.linkUrl = data.linkUrl || '';
-      this.alt = data.alt || '';
-      this.fit = data.fit || 'cover';
-    }
-  };
-};
-</script>
+<div class="h-full w-full">
+  {% if image_url %}
+  <a href="{{ link_url or '#' }}" target="{{ '_blank' if link_url else '_self' }}" 
+     class="block h-full w-full {{ '' if link_url else 'cursor-default' }}">
+    <img src="{{ image_url }}" alt="{{ alt }}" 
+         class="h-full w-full rounded"
+         style="object-fit: {{ fit }}">
+  </a>
+  {% else %}
+  <div class="h-full flex items-center justify-center text-gray-500 text-sm">
+    未配置图片
+  </div>
+  {% endif %}
+</div>

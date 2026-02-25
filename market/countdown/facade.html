@@ -1,38 +1,21 @@
-<div x-data="countdownPanel()" x-init="init()" class="h-full flex flex-col items-center justify-center text-center">
-  <div class="text-sm text-gray-500 mb-2" x-text="eventName"></div>
+{% set data = storage.get('countdown', {}) %}
+{% set target_date = data.get('targetDate', '') %}
+{% set event_name = data.get('eventName', '目标日') %}
+
+<div class="h-full flex flex-col items-center justify-center text-center"
+     x-data="{ days: '--' }"
+     x-init="
+       const target = '{{ target_date }}';
+       function calc() {
+         if (!target) { days = '--'; return; }
+         const diff = Math.ceil((new Date(target) - new Date()) / 86400000);
+         days = diff;
+       }
+       calc();
+       setInterval(calc, 60000);
+     ">
+  <div class="text-sm text-gray-500 mb-2">{{ event_name }}</div>
   <div class="text-4xl font-bold text-gray-100 mb-1" x-text="days"></div>
   <div class="text-sm text-gray-400">天</div>
-  <div class="text-xs text-gray-600 mt-3" x-text="targetDate"></div>
+  <div class="text-xs text-gray-600 mt-3">{{ target_date }}</div>
 </div>
-
-<script>
-window.countdownPanel = window.countdownPanel || function() {
-  return {
-    targetDate: '',
-    eventName: '目标日',
-    days: '--',
-    panelId: '',
-    
-    async init() {
-      this.panelId = this.$el.closest('[data-panel-id]').dataset.panelId;
-      const res = await fetch('/api/panels/' + this.panelId + '/data');
-      const data = await res.json();
-      this.targetDate = data.targetDate || '';
-      this.eventName = data.eventName || '目标日';
-      this.calculate();
-      setInterval(() => this.calculate(), 60000); // 每分钟更新
-    },
-    
-    calculate() {
-      if (!this.targetDate) {
-        this.days = '--';
-        return;
-      }
-      const target = new Date(this.targetDate);
-      const now = new Date();
-      const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-      this.days = diff;
-    }
-  };
-};
-</script>

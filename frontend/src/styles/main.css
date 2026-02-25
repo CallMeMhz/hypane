@@ -8,7 +8,8 @@
  * we need to go up 3 levels to reach app/templates
  */
 @source "../../../app/templates/**/*.html";
-@source "../../../data/panels/*/facade.html";
+@source "../../../data/panels/*/*.html";
+@source "../../../market/*/*.html";
 
 /* Enable dark mode via class */
 @variant dark (&:where(.dark, .dark *));

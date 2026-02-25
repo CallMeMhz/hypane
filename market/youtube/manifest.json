@@ -7,21 +7,11 @@
   "defaultSize": "6x4",
   "minSize": "4x3",
   "keywords": ["youtube", "video", "视频", "播放"],
-  "configSchema": {
-    "videoId": {
-      "type": "string",
-      "label": "视频 ID",
-      "description": "YouTube 视频 ID，如 dQw4w9WgXcQ",
-      "required": true
-    },
-    "autoplay": {
-      "type": "boolean",
-      "label": "自动播放",
-      "default": false
+  "storage_ids": ["youtube"],
+  "defaultStorage": {
+    "youtube": {
+      "videoId": "",
+      "autoplay": false
     }
-  },
-  "defaultData": {
-    "videoId": "",
-    "autoplay": false
   }
 }

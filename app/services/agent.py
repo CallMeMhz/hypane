@@ -75,6 +75,7 @@ async def run_agent_chat(message: str) -> dict:
         PI_COMMAND,
         "-p", message,
         "--session-dir", str(SESSIONS_DIR),
+        "--no-tools",  # Disable default read/bash/edit/write tools
         "--mode", "text",
     ]
     
@@ -141,6 +142,7 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
         PI_COMMAND,
         "-p", full_message,
         "-e", str(DASHBOARD_EXTENSION),
+        "--no-tools",  # Disable default read/bash/edit/write tools
         "--mode", "json",
     ]
     
@@ -235,6 +237,8 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
                         # 显示 panel 工具的参数
                         if "panelId" in tool_args:
                             display_args = {"panelId": tool_args["panelId"]}
+                        elif "storageId" in tool_args:
+                            display_args = {"storageId": tool_args["storageId"]}
                         elif "type" in tool_args:
                             display_args = {"type": tool_args["type"], "title": tool_args.get("title", "")}
                     
