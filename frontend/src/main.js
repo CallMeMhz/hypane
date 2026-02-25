@@ -18,11 +18,8 @@ import { registerChat } from './chat/index.js'
 
 registerChat(Alpine, {
   onToolEnd(tool, args) {
-    if (['panel_create', 'panel_delete', 'market_install'].includes(tool)) {
+    if (['panel_create', 'panel_delete', 'panel_update', 'market_install'].includes(tool)) {
       htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' })
-    } else if (tool === 'panel_update' && args.panelId) {
-      const el = document.querySelector(`[data-panel-id="${args.panelId}"] .card-content`)
-      if (el) htmx.ajax('GET', `/panels/${args.panelId}/content`, { target: el, swap: 'innerHTML' })
     } else if (tool === 'storage_update' && args.storageId) {
       fetch('/api/panels').then(r => r.json()).then(panels => {
         panels.filter(p => p.storage_ids?.includes(args.storageId))

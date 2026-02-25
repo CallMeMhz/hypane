@@ -39,9 +39,20 @@ def schedule_task(task_id: str, cron_expr: str):
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
     
-    # Parse cron expression (minute hour day month day_of_week)
+    # Parse cron expression
+    # 5 parts: minute hour day month day_of_week
+    # 6 parts: second minute hour day month day_of_week
     parts = cron_expr.split()
-    if len(parts) == 5:
+    if len(parts) == 6:
+        trigger = CronTrigger(
+            second=parts[0],
+            minute=parts[1],
+            hour=parts[2],
+            day=parts[3],
+            month=parts[4],
+            day_of_week=parts[5],
+        )
+    elif len(parts) == 5:
         trigger = CronTrigger(
             minute=parts[0],
             hour=parts[1],
@@ -49,16 +60,18 @@ def schedule_task(task_id: str, cron_expr: str):
             month=parts[3],
             day_of_week=parts[4],
         )
-        scheduler.add_job(
-            run_scheduled_task,
-            trigger=trigger,
-            args=[task_id],
-            id=job_id,
-            replace_existing=True,
-        )
-        logger.info(f"Scheduled task {task_id} with cron: {cron_expr}")
     else:
         logger.warning(f"Invalid cron expression for task {task_id}: {cron_expr}")
+        return
+
+    scheduler.add_job(
+        run_scheduled_task,
+        trigger=trigger,
+        args=[task_id],
+        id=job_id,
+        replace_existing=True,
+    )
+    logger.info(f"Scheduled task {task_id} with cron: {cron_expr}")
 
 
 def unschedule_task(task_id: str):

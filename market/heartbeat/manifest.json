@@ -1,0 +1,22 @@
+{
+  "id": "heartbeat",
+  "name": "服务器心跳",
+  "description": "每5秒刷新一次，显示心跳计数和服务器时间",
+  "icon": "activity",
+  "headerColor": "green",
+  "defaultSize": "3x2",
+  "minSize": "2x2",
+  "keywords": ["heartbeat", "心跳", "pulse", "test", "scheduler"],
+  "storage_ids": ["heartbeat"],
+  "defaultStorage": {
+    "heartbeat": {
+      "beat": 0,
+      "started_at": null,
+      "last_beat": null
+    }
+  },
+  "task": {
+    "schedule": "*/5 * * * * *",
+    "enabled": true
+  }
+}
