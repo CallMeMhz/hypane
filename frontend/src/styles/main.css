@@ -34,8 +34,6 @@
     border-radius: 0.5rem;
     padding: 1rem;
     transition: all 0.2s;
-    float: left;
-    margin-bottom: 1rem;
     position: relative;
     overflow: hidden;
     display: flex;
@@ -46,61 +44,13 @@
     border-color: var(--kb-bg-hover);
   }
   
-  /* Resize handle */
-  .card-resize-handle {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 16px;
-    height: 16px;
-    cursor: nwse-resize;
-    opacity: 0;
-    transition: opacity 0.2s;
-    color: var(--kb-text-ghost);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .card:hover .card-resize-handle {
-    opacity: 1;
-  }
-  
-  .card-resize-handle:hover {
-    color: var(--kb-text-muted);
-  }
-  
-  /* Sortable drag styles */
-  .sortable-ghost {
-    opacity: 0.4;
-  }
-  
-  .sortable-chosen {
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  }
-  
-  .sortable-drag {
-    opacity: 1 !important;
-  }
-  
+  /* Drag handle */
   .card-drag-handle {
     touch-action: none;
   }
-  
+
   .card-drag-handle:active {
     cursor: grabbing;
-  }
-  
-  .card-small {
-    /* Uses default width from media queries */
-  }
-  
-  .card-medium {
-    /* Uses medium width from media queries */
-  }
-  
-  .card-large {
-    /* Uses large width from media queries */
   }
   
   /* Card title */
@@ -142,32 +92,7 @@
     color: var(--kb-text-primary);
   }
   
-  /* Inputs - Kabadoni styled */
-  .chat-input {
-    width: 100%;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--kb-border);
-    background-color: var(--kb-bg-primary);
-    color: var(--kb-text-normal);
-  }
-  
-  .chat-input:focus {
-    outline: none;
-    border-color: var(--kb-bg-hover);
-  }
-  
-  .chat-input::placeholder {
-    color: var(--kb-text-faint);
-  }
-
-  .chat-input-editable {
-    word-break: break-word;
-  }
-  
-  .chat-input-editable:empty:before {
-    pointer-events: none;
-  }
+  /* Chat styles moved to chat/chat.css */
 
   /* Text colors - semantic classes */
   .text-primary {
@@ -192,36 +117,6 @@
     color: var(--kb-text-primary);
   }
   
-  /* Chat box */
-  .chat-box {
-    background-color: var(--kb-bg-secondary);
-    border: 1px solid var(--kb-border);
-  }
-  
-  .chat-message-user {
-    background-color: var(--kb-bg-tertiary);
-    color: var(--kb-text-normal);
-  }
-  
-  .chat-message-assistant {
-    background-color: var(--kb-bg-primary);
-    color: var(--kb-text-normal);
-  }
-  
-  /* Chat thinking blocks - dimmed style */
-  .chat-thinking {
-    color: var(--kb-text-ghost);
-    font-size: 0.85em;
-    font-style: italic;
-    border-left: 2px solid var(--kb-border);
-    padding-left: 0.75rem;
-    margin: 0.5rem 0;
-    opacity: 0.7;
-  }
-  
-  .chat-thinking p {
-    margin: 0.25rem 0;
-  }
   
   /* Links */
   a {
@@ -262,118 +157,43 @@
   }
 }
 
-/* Free-position grid layout for dashboard */
-/* Dashboard grid - Microsoft-style tile grid */
-.dashboard-grid {
-  position: relative;
+/* GridStack theme overrides */
+.grid-stack {
   min-height: 400px;
-  padding: 8px;
-  /* Fixed cell size - no scaling */
-  --cell-size: 70px;
-  --grid-gap: 8px;
-  --grid-cols: 12;
-  /* Center the grid: width = cols * cell + (cols-1) * gap */
-  width: calc(var(--grid-cols) * var(--cell-size) + (var(--grid-cols) - 1) * var(--grid-gap));
-  max-width: 100%;
+  max-width: calc(12 * 70px + 11 * 8px);
   margin: 0 auto;
 }
 
-/* Mobile: flow layout (no absolute positioning) */
-@media (max-width: 767px) {
-  .dashboard-grid {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 12px;
-  }
-  
-  .dashboard-grid .card {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 120px;
-  }
-  
-  /* Hide drag and resize handles on mobile */
-  .dashboard-grid .card-drag-handle,
-  .dashboard-grid .card-resize-handle {
-    display: none !important;
-  }
-}
-
-/* Desktop: absolute positioning */
-@media (min-width: 768px) {
-  .dashboard-grid .card {
-    position: absolute;
-    margin: 0;
-    box-sizing: border-box;
-    transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
-  }
-}
-
-/* Card base styling */
-.dashboard-grid .card {
+/* Card styling inside grid items — let GridStack's absolute positioning (top/right/bottom/left)
+   control size via CSS vars; do NOT set width/height here. */
+.grid-stack-item-content.card {
   background-color: var(--kb-bg-secondary);
   border: 1px solid var(--kb-border);
   border-radius: 0.5rem;
   padding: 1rem;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.dashboard-grid .card:hover {
+.grid-stack-item-content.card:hover {
   border-color: var(--kb-bg-hover);
 }
 
-/* Size uses cell + gap for multi-cell tiles */
-.dashboard-grid .card.w1 { width: calc(1 * var(--cell-size)); }
-.dashboard-grid .card.w2 { width: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
-.dashboard-grid .card.w3 { width: calc(3 * var(--cell-size) + 2 * var(--grid-gap)); }
-.dashboard-grid .card.w4 { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
-.dashboard-grid .card.w5 { width: calc(5 * var(--cell-size) + 4 * var(--grid-gap)); }
-.dashboard-grid .card.w6 { width: calc(6 * var(--cell-size) + 5 * var(--grid-gap)); }
-.dashboard-grid .card.w7 { width: calc(7 * var(--cell-size) + 6 * var(--grid-gap)); }
-.dashboard-grid .card.w8 { width: calc(8 * var(--cell-size) + 7 * var(--grid-gap)); }
-.dashboard-grid .card.w9 { width: calc(9 * var(--cell-size) + 8 * var(--grid-gap)); }
-.dashboard-grid .card.w10 { width: calc(10 * var(--cell-size) + 9 * var(--grid-gap)); }
-.dashboard-grid .card.w11 { width: calc(11 * var(--cell-size) + 10 * var(--grid-gap)); }
-.dashboard-grid .card.w12 { width: calc(12 * var(--cell-size) + 11 * var(--grid-gap)); }
-
-.dashboard-grid .card.h1 { height: calc(1 * var(--cell-size)); }
-.dashboard-grid .card.h2 { height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
-.dashboard-grid .card.h3 { height: calc(3 * var(--cell-size) + 2 * var(--grid-gap)); }
-.dashboard-grid .card.h4 { height: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
-.dashboard-grid .card.h5 { height: calc(5 * var(--cell-size) + 4 * var(--grid-gap)); }
-.dashboard-grid .card.h6 { height: calc(6 * var(--cell-size) + 5 * var(--grid-gap)); }
-.dashboard-grid .card.h7 { height: calc(7 * var(--cell-size) + 6 * var(--grid-gap)); }
-.dashboard-grid .card.h8 { height: calc(8 * var(--cell-size) + 7 * var(--grid-gap)); }
-
-/* Default size */
-.dashboard-grid .card {
-  width: calc(2 * var(--cell-size) + 1 * var(--grid-gap));
-  height: calc(2 * var(--cell-size) + 1 * var(--grid-gap));
+/* GridStack resize handle styling */
+.grid-stack > .grid-stack-item > .ui-resizable-se {
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: var(--kb-text-ghost);
 }
 
-/* Legacy size classes */
-.dashboard-grid .card-small { width: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
-.dashboard-grid .card-medium { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
-.dashboard-grid .card-large { width: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); height: calc(4 * var(--cell-size) + 3 * var(--grid-gap)); }
-.dashboard-grid .card-full { width: calc(12 * var(--cell-size) + 11 * var(--grid-gap)); height: calc(2 * var(--cell-size) + 1 * var(--grid-gap)); }
-
-/* Chat box animation */
-.chat-box-enter {
-  animation: slideUp 0.3s ease-out;
+.grid-stack > .grid-stack-item:hover > .ui-resizable-se {
+  opacity: 1;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+/* Mobile: hide drag handle */
+@media (max-width: 767px) {
+  .grid-stack .card-drag-handle {
+    display: none !important;
   }
 }

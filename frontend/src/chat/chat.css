@@ -1,0 +1,73 @@
+/* Chat input */
+.chat-input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--kb-border);
+  background-color: var(--kb-bg-primary);
+  color: var(--kb-text-normal);
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--kb-bg-hover);
+}
+
+.chat-input::placeholder {
+  color: var(--kb-text-faint);
+}
+
+.chat-input-editable {
+  word-break: break-word;
+}
+
+.chat-input-editable:empty:before {
+  pointer-events: none;
+}
+
+/* Chat box */
+.chat-box {
+  background-color: var(--kb-bg-secondary);
+  border: 1px solid var(--kb-border);
+}
+
+.chat-message-user {
+  background-color: var(--kb-bg-tertiary);
+  color: var(--kb-text-normal);
+}
+
+.chat-message-assistant {
+  background-color: var(--kb-bg-primary);
+  color: var(--kb-text-normal);
+}
+
+/* Chat thinking blocks - dimmed style */
+.chat-thinking {
+  color: var(--kb-text-ghost);
+  font-size: 0.85em;
+  font-style: italic;
+  border-left: 2px solid var(--kb-border);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  opacity: 0.7;
+}
+
+.chat-thinking p {
+  margin: 0.25rem 0;
+}
+
+/* Chat box animation */
+.chat-box-enter {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

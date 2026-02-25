@@ -1,78 +1,69 @@
 <!-- Panel Partial - renders a single panel -->
 {% set grid_size = panel.size or '3x2' %}
 {% if 'x' in grid_size %}
-  {% set w = grid_size.split('x')[0] %}
-  {% set h = grid_size.split('x')[1] %}
-  {% set size_class = 'w' ~ w ~ ' h' ~ h %}
+  {% set w = grid_size.split('x')[0] | int %}
+  {% set h = grid_size.split('x')[1] | int %}
 {% else %}
-  {% set size_class = 'card-' ~ grid_size %}
+  {% set w = 3 %}
+  {% set h = 2 %}
 {% endif %}
-{% set panel_order = panel.order if panel.order is defined else 0 %}
 {% set min_size = panel.minSize or '2x2' %}
-{% set header_color = panel.headerColor or 'gray' %}
+{% set min_w = min_size.split('x')[0] | int if 'x' in min_size else 2 %}
+{% set min_h = min_size.split('x')[1] | int if 'x' in min_size else 2 %}
 {% set pos_x = panel.position.x if panel.position else 0 %}
 {% set pos_y = panel.position.y if panel.position else 0 %}
 
-<div 
-  id="panel-{{ panel.id }}"
-  class="card {{ size_class }}"
-  data-panel-id="{{ panel.id }}"
-  data-grid-size="{{ grid_size }}"
-  data-grid-x="{{ pos_x }}"
-  data-grid-y="{{ pos_y }}"
-  data-min-size="{{ min_size }}"
-  data-order="{{ panel_order }}"
-  hx-get="/panels/{{ panel.id }}"
-  hx-trigger="refresh-{{ panel.id }} from:body"
-  hx-swap="outerHTML"
+<div class="grid-stack-item"
+     gs-x="{{ pos_x }}" gs-y="{{ pos_y }}"
+     gs-w="{{ w }}" gs-h="{{ h }}"
+     gs-min-w="{{ min_w }}" gs-min-h="{{ min_h }}"
+     gs-id="{{ panel.id }}"
+     data-panel-id="{{ panel.id }}"
+     id="panel-{{ panel.id }}"
+     hx-get="/panels/{{ panel.id }}"
+     hx-trigger="refresh-{{ panel.id }} from:body"
+     hx-swap="outerHTML"
 >
-  <!-- Panel Header -->
-  <div class="flex items-center justify-between mb-3 group/header">
-    <div class="flex items-center gap-2 relative">
-      <!-- Panel Icon (also drag handle) -->
-      <div class="card-drag-handle cursor-grab flex items-center justify-center w-5 h-5 rounded transition-opacity duration-200"
-           style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};"
-           title="Drag to move">
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          {{ panel.iconSvg | safe }}
-        </svg>
+  <div class="grid-stack-item-content card">
+    <!-- Panel Header -->
+    <div class="flex items-center justify-between mb-1.5 group/header">
+      <div class="flex items-center gap-2 relative">
+        <!-- Panel Icon (also drag handle) -->
+        <div class="card-drag-handle cursor-grab flex items-center justify-center w-5 h-5 rounded transition-opacity duration-200"
+             style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};"
+             title="Drag to move">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            {{ panel.iconSvg | safe }}
+          </svg>
+        </div>
+        <!-- Title -->
+        <h3 class="text-sm font-medium" style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};">{{ panel.title }}</h3>
+        <!-- Magic wand button -->
+        <button
+          class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1 rounded"
+          style="color: var(--kb-text-ghost);"
+          onmouseover="this.style.color='var(--kb-text-muted)'; this.style.backgroundColor='var(--kb-bg-tertiary)';"
+          onmouseout="this.style.color='var(--kb-text-ghost)'; this.style.backgroundColor='transparent';"
+          onclick="insertCardToChat('{{ panel.id }}')"
+          title="Add to chat"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+            <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
+          </svg>
+        </button>
       </div>
-      <!-- Title -->
-      <h3 class="text-sm font-medium" style="color: {{ panel.headerColorValue or 'var(--kb-text-muted)' }};">{{ panel.title }}</h3>
-      <!-- Magic wand button -->
-      <button 
-        class="card-wand-btn opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 p-1 rounded"
-        style="color: var(--kb-text-ghost);"
-        onmouseover="this.style.color='var(--kb-text-muted)'; this.style.backgroundColor='var(--kb-bg-tertiary)';"
-        onmouseout="this.style.color='var(--kb-text-ghost)'; this.style.backgroundColor='transparent';"
-        onclick="insertCardToChat('{{ panel.id }}')"
-        title="Add to chat"
-      >
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-          <path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>
-        </svg>
-      </button>
     </div>
-  </div>
 
-  <!-- Panel Content (Facade) -->
-  <div class="card-content" data-panel-id="{{ panel.id }}">
-    {% if panel.facade %}
-      {{ panel.facade | safe }}
-    {% else %}
-      <div class="text-sm" style="color: var(--kb-text-muted);">
-        No facade defined
-      </div>
-    {% endif %}
-  </div>
-
-  <!-- Resize handle -->
-  <div class="card-resize-handle" 
-       data-panel-id="{{ panel.id }}"
-       title="Drag to resize">
-    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z"/>
-    </svg>
+    <!-- Panel Content (Facade) -->
+    <div class="card-content" data-panel-id="{{ panel.id }}">
+      {% if panel.facade %}
+        {{ panel.facade | safe }}
+      {% else %}
+        <div class="text-sm" style="color: var(--kb-text-muted);">
+          No facade defined
+        </div>
+      {% endif %}
+    </div>
   </div>
 </div>

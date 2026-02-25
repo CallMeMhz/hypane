@@ -194,20 +194,19 @@ async def render_panel(panel_id: str):
 async def execute_action(panel_id: str, request: PanelActionRequest):
     """
     Execute panel handler action.
-    
+
     Handler receives: on_action(action, payload, storage)
     Storage is modified in-place, then saved.
     Returns re-rendered panel HTML with HX-Trigger to refresh panel.
     """
-    from fastapi.responses import JSONResponse
-    
+    from fastapi.responses import HTMLResponse
+
     result = panels.execute_action(panel_id, request.action, request.payload)
-    
+
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result.get("error"))
-    
-    # Return with HX-Trigger header to refresh the panel
-    return JSONResponse(
-        content=result,
+
+    return HTMLResponse(
+        content=result.get("html", ""),
         headers={"HX-Trigger": f"refresh-{panel_id}"}
     )

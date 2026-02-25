@@ -58,9 +58,9 @@
   </header>
 
   <!-- Dashboard Panels Grid -->
-  <div id="dashboard-panels" 
-       class="dashboard-grid"
-       hx-get="/dashboard-panels" 
+  <div id="dashboard-panels"
+       class="grid-stack"
+       hx-get="/dashboard-panels"
        hx-trigger="refresh from:body">
     {% for panel in panels %}
       {% include "partials/panel.html" %}
@@ -257,19 +257,16 @@ const iconEmojis = {
 // Global panelAction function for template handlers
 async function panelAction(panelId, action, payload = {}) {
   try {
+    const target = document.querySelector(`#panel-${panelId} .card-content`);
+    if (!target) return;
+    // POST body as JSON, HTMX swaps the returned HTML into .card-content
     const res = await fetch(`/api/panels/${panelId}/action`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, payload })
     });
     if (res.ok) {
-      const data = await res.json();
-      // Directly replace panel content with returned HTML
-      const content = document.querySelector(`#panel-${panelId} .card-content`);
-      if (content && data.html) {
-        content.innerHTML = data.html;
-      }
-      return data;
+      target.innerHTML = await res.text();
     }
   } catch (e) {
     console.error(`Panel action failed: ${panelId}/${action}`, e);
