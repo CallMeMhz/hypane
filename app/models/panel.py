@@ -120,9 +120,13 @@ class Panel:
         return panels
     
     def delete(self) -> bool:
-        """Delete panel directory."""
+        """Soft-delete panel directory (move to trash)."""
         import shutil
-        if self.dir.exists():
-            shutil.rmtree(self.dir)
-            return True
-        return False
+        if not self.dir.exists():
+            return False
+        trash = Path("data/_trash/panels") / self.id
+        trash.parent.mkdir(parents=True, exist_ok=True)
+        if trash.exists():
+            shutil.rmtree(trash)
+        shutil.move(str(self.dir), str(trash))
+        return True

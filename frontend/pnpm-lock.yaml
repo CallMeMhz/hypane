@@ -14,9 +14,6 @@ importers:
       alpinejs:
         specifier: ^3.14.0
         version: 3.15.8
-      drawflow:
-        specifier: ^0.0.59
-        version: 0.0.59
       gridstack:
         specifier: ^12.4.2
         version: 12.4.2
@@ -471,9 +468,6 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-
-  drawflow@0.0.59:
-    resolution: {integrity: sha512-HJM/8trYzignViTMzUSpskRclDhE62jM6oxjgqEJQBbkX9QvDG7JJwRlvdjqnjfL192Pdb0aIysrZMUqG8/vyg==}
 
   enhanced-resolve@5.19.0:
     resolution: {integrity: sha512-phv3E1Xl4tQOShqSte26C7Fl84EwUdZsyOuSSk9qtAGyyQs2s3jJzComh+Abf4g187lUUAvH+H26omrqia2aGg==}
@@ -941,8 +935,6 @@ snapshots:
   cssesc@3.0.0: {}
 
   detect-libc@2.1.2: {}
-
-  drawflow@0.0.59: {}
 
   enhanced-resolve@5.19.0:
     dependencies:

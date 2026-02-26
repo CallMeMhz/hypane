@@ -241,7 +241,7 @@ Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink,
   pi.registerTool({
     name: "panel_delete",
     label: "Delete Panel",
-    description: "Delete a panel.",
+    description: "Delete a panel (soft delete — moved to trash, recoverable). Cascade: related storages and tasks that are exclusively used by this panel are also soft-deleted.",
     parameters: Type.Object({
       panelId: Type.String({ description: "Panel ID" }),
     }),

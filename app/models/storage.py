@@ -71,9 +71,15 @@ class Storage:
         return storages
     
     def delete(self) -> bool:
-        """Delete storage file."""
+        """Soft-delete storage file (move to trash)."""
+        import shutil
         path = STORAGE_DIR / f"{self.id}.json"
-        if path.exists():
-            path.unlink()
-            return True
-        return False
+        if not path.exists():
+            return False
+        trash = Path("data/_trash/storages")
+        trash.mkdir(parents=True, exist_ok=True)
+        dest = trash / f"{self.id}.json"
+        if dest.exists():
+            dest.unlink()
+        shutil.move(str(path), str(dest))
+        return True

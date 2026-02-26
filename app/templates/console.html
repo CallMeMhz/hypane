@@ -2,17 +2,10 @@
 
 {% block title %}Resource Console{% endblock %}
 
-{% block styles %}
-<link rel="stylesheet" href="/static/css/main.css">
-<link rel="stylesheet" href="/static/css/console.css">
-{% endblock %}
-
-{% block scripts %}
-<script src="/static/js/console.js" defer></script>
-{% endblock %}
+{% block scripts %}{% endblock %}
 
 {% block content %}
-<div class="h-screen flex flex-col">
+<div class="min-h-screen" x-data="consoleApp">
   <!-- Header -->
   <header class="px-4 py-3 flex items-center gap-4" style="background: var(--kb-bg-tertiary); border-bottom: 1px solid var(--kb-border);">
     <a href="/" class="p-1.5 rounded-lg transition-colors" style="color: var(--kb-text-dim);"
@@ -24,34 +17,134 @@
     </a>
     <h1 class="text-lg font-medium" style="color: var(--kb-text-primary);">Resource Console</h1>
 
-    <!-- Legend -->
-    <div class="ml-auto flex items-center gap-4 text-xs" style="color: var(--kb-text-dim);">
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--kb-blue);"></span> Panel</span>
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--kb-yellow);"></span> Storage</span>
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--kb-green);"></span> Task</span>
-    </div>
+    <div class="ml-auto flex items-center gap-3">
+      <!-- Legend -->
+      <div class="flex items-center gap-3 text-xs" style="color: var(--kb-text-dim);">
+        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background: var(--kb-blue);"></span> Panel</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background: var(--kb-yellow);"></span> Storage</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded" style="background: var(--kb-green);"></span> Task</span>
+      </div>
 
-    <!-- Theme Toggle -->
-    <button
-      onclick="toggleTheme()"
-      class="p-2 rounded-lg transition-colors"
-      style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-      onmouseout="this.style.backgroundColor='transparent'"
-      title="Toggle theme"
-    >
-      <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-      <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-      </svg>
-    </button>
+      <!-- Theme Toggle -->
+      <button
+        onclick="toggleTheme()"
+        class="p-2 rounded-lg transition-colors"
+        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
+        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+        onmouseout="this.style.backgroundColor='transparent'"
+        title="Toggle theme"
+      >
+        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
+    </div>
   </header>
 
-  <!-- Drawflow canvas -->
-  <div style="flex:1;min-height:0;overflow:hidden;">
-    <div id="drawflow" style="width:100%;height:100%;"></div>
+  <!-- Content -->
+  <div class="max-w-3xl mx-auto px-4 py-6 space-y-8">
+
+    <!-- PANELS -->
+    <section>
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+        Panels <span class="font-normal" x-text="'(' + panels.length + ')'"></span>
+      </h2>
+      <div x-show="panels.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No panels</div>
+      <div class="space-y-2">
+        <template x-for="p in panels" :key="p.id">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);">
+            <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-blue);"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-sm" style="color: var(--kb-text-primary);" x-text="(p.icon || '') + ' ' + p.title"></span>
+                <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--kb-bg-tertiary); color: var(--kb-text-muted);" x-text="p.size"></span>
+              </div>
+              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
+                <span x-show="p.storage_ids && p.storage_ids.length">
+                  storages: <span x-text="p.storage_ids.join(', ')"></span>
+                </span>
+                <span x-show="!p.storage_ids || !p.storage_ids.length" style="color: var(--kb-text-faint);">no storages</span>
+              </div>
+            </div>
+            <span class="text-xs font-mono flex-shrink-0" style="color: var(--kb-text-faint);" x-text="p.id"></span>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- STORAGES -->
+    <section>
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+        Storages <span class="font-normal" x-text="'(' + storages.length + ')'"></span>
+        <span x-show="orphanIds.length" class="ml-2 text-xs font-normal px-1.5 py-0.5 rounded" style="background: color-mix(in srgb, var(--kb-yellow) 20%, transparent); color: var(--kb-yellow);">
+          orphans: <span x-text="orphanIds.length"></span>
+        </span>
+      </h2>
+      <div x-show="storages.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No storages</div>
+      <div class="space-y-2">
+        <template x-for="s in storages" :key="s.id">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);"
+               :style="orphanIds.includes(s.id) ? 'border-color: var(--kb-yellow);' : ''">
+            <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-yellow);"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-sm font-mono" style="color: var(--kb-text-primary);" x-text="s.id"></span>
+                <span x-show="orphanIds.includes(s.id)" class="text-xs px-1.5 py-0.5 rounded" style="background: color-mix(in srgb, var(--kb-yellow) 20%, transparent); color: var(--kb-yellow);">
+                  unused
+                </span>
+              </div>
+              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
+                <template x-if="storageRefs[s.id] && storageRefs[s.id].length">
+                  <span x-text="storageRefs[s.id].map(r => r.type + ':' + r.name).join(', ')"></span>
+                </template>
+              </div>
+            </div>
+            <!-- Delete button for orphans -->
+            <button x-show="orphanIds.includes(s.id)"
+                    @click="deleteStorage(s.id)"
+                    class="text-xs px-2 py-1 rounded transition-colors flex-shrink-0"
+                    style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
+                    onmouseover="this.style.borderColor='var(--kb-red)'; this.style.color='var(--kb-red)'"
+                    onmouseout="this.style.borderColor='var(--kb-border)'; this.style.color='var(--kb-text-dim)'">
+              Delete
+            </button>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- TASKS -->
+    <section>
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+        Tasks <span class="font-normal" x-text="'(' + tasks.length + ')'"></span>
+      </h2>
+      <div x-show="tasks.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No tasks</div>
+      <div class="space-y-2">
+        <template x-for="t in tasks" :key="t.id">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);">
+            <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-green);"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-sm" style="color: var(--kb-text-primary);" x-text="t.name"></span>
+                <span x-show="t.schedule" class="text-xs font-mono px-1.5 py-0.5 rounded" style="background: var(--kb-bg-tertiary); color: var(--kb-text-muted);" x-text="t.schedule"></span>
+                <span x-show="!t.enabled" class="text-xs px-1.5 py-0.5 rounded" style="background: var(--kb-bg-hover); color: var(--kb-text-dim);">disabled</span>
+              </div>
+              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
+                <span x-show="t.storage_ids && t.storage_ids.length">
+                  storages: <span x-text="t.storage_ids.join(', ')"></span>
+                </span>
+                <span x-show="!t.storage_ids || !t.storage_ids.length" style="color: var(--kb-text-faint);">no storages</span>
+              </div>
+            </div>
+            <span class="text-xs font-mono flex-shrink-0" style="color: var(--kb-text-faint);" x-text="t.id"></span>
+          </div>
+        </template>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -60,6 +153,8 @@
     panels: {{ panels | tojson }},
     storages: {{ storages | tojson }},
     tasks: {{ tasks | tojson }},
+    storageRefs: {{ storage_refs | tojson }},
+    orphanIds: {{ orphan_ids | tojson }},
   }
 
   function toggleTheme() {
@@ -72,5 +167,28 @@
       localStorage.theme = 'dark';
     }
   }
+
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('consoleApp', () => ({
+      panels: window.__CONSOLE_DATA__.panels,
+      storages: window.__CONSOLE_DATA__.storages,
+      tasks: window.__CONSOLE_DATA__.tasks,
+      storageRefs: window.__CONSOLE_DATA__.storageRefs,
+      orphanIds: window.__CONSOLE_DATA__.orphanIds,
+
+      async deleteStorage(storageId) {
+        if (!confirm(`Delete orphan storage "${storageId}"?`)) return;
+        try {
+          const res = await fetch(`/api/storages/${storageId}`, { method: 'DELETE' });
+          if (res.ok) {
+            this.storages = this.storages.filter(s => s.id !== storageId);
+            this.orphanIds = this.orphanIds.filter(id => id !== storageId);
+          }
+        } catch (e) {
+          console.error('Failed to delete storage:', e);
+        }
+      },
+    }));
+  });
 </script>
 {% endblock %}

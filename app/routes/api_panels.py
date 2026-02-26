@@ -126,16 +126,51 @@ async def update_panel(panel_id: str, request: PanelUpdateRequest):
 
 @router.delete("/{panel_id}")
 async def delete_panel(panel_id: str):
-    """Delete a panel."""
+    """Delete a panel with cascade soft-delete of exclusively-owned storages and tasks."""
     from app.services.dashboard import remove_panel_from_layout
-    
-    if not panels.delete_panel(panel_id):
+    from app.services import tasks_v2 as task_service
+
+    panel = panels.get_panel(panel_id)
+    if not panel:
         raise HTTPException(status_code=404, detail="Panel not found")
-    
-    # Remove from layout
+
+    panel_sids = set(panel.get("storage_ids", []))
+
+    # Collect storage_ids referenced by other panels
+    other_panels = [p for p in panels.list_panels() if p["id"] != panel_id]
+    all_tasks = task_service.list_tasks()
+    used_sids: set[str] = set()
+    for p in other_panels:
+        used_sids.update(p.get("storage_ids", []))
+
+    # Cascade-delete tasks whose storage_ids are a subset of this panel's
+    deleted_tasks: list[str] = []
+    for t in all_tasks:
+        task_sids = set(t.get("storage_ids", []))
+        if task_sids and task_sids <= panel_sids:
+            task_service.delete_task(t["id"])
+            deleted_tasks.append(t["id"])
+        else:
+            used_sids.update(t.get("storage_ids", []))
+
+    # Soft-delete orphaned storages (only used by this panel)
+    orphan_sids = panel_sids - used_sids
+    deleted_storages: list[str] = []
+    for sid in orphan_sids:
+        if storage_service.delete_storage(sid):
+            deleted_storages.append(sid)
+
+    # Soft-delete the panel itself
+    panels.delete_panel(panel_id)
     remove_panel_from_layout(panel_id)
-    
-    return {"success": True}
+
+    return {
+        "success": True,
+        "cascade": {
+            "storages": deleted_storages,
+            "tasks": deleted_tasks,
+        },
+    }
 
 
 # === Template & Handler ===
