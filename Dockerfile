@@ -108,7 +108,6 @@ RUN uv sync --frozen --no-dev
 COPY app/ ./app/
 COPY skills/ ./skills/
 COPY extensions/ ./extensions/
-COPY scheduler/ ./scheduler/
 
 # Frontend assets
 COPY --from=frontend-builder /build/static ./static

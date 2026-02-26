@@ -4,6 +4,7 @@ from app.models.task import Task
 from app.models.storage import Storage
 from app.sandbox import get_executor, HandlerContext, HandlerEvent, EventType
 from app.services.storage import load_storages_for_context, save_storages_from_context
+from app.services.task_scheduler import schedule_task as _schedule, unschedule_task as _unschedule
 
 
 def list_tasks() -> list[dict]:
@@ -34,10 +35,13 @@ def create_task(
         enabled=enabled,
     )
     t.save()
-    
+
     if handler:
         t.set_handler(handler)
-    
+
+    if t.enabled and t.schedule:
+        _schedule(t.id, t.schedule)
+
     return t.to_dict()
 
 
@@ -50,8 +54,14 @@ def update_task(task_id: str, updates: dict) -> dict | None:
     for key in ["name", "schedule", "storage_ids", "enabled"]:
         if key in updates:
             setattr(t, key, updates[key])
-    
+
     t.save()
+
+    # Re-sync with scheduler
+    _unschedule(t.id)
+    if t.enabled and t.schedule:
+        _schedule(t.id, t.schedule)
+
     return t.to_dict()
 
 
@@ -60,6 +70,7 @@ def delete_task(task_id: str) -> bool:
     t = Task.load(task_id)
     if not t:
         return False
+    _unschedule(task_id)
     return t.delete()
 
 

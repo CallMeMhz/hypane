@@ -7,26 +7,23 @@
 
 ## Handler 模式
 
-handler.py 支持两种触发：
+handler.py 支持以下入口函数：
 
 ```python
-# HTTP 触发（用户交互）
-async def handle_action(action: str, payload: dict, data: dict) -> dict:
-    """处理用户操作，返回更新后的 data"""
-    if action == "click":
-        data["count"] = data.get("count", 0) + 1
-    return data
+# 用户交互（POST /api/panels/{id}/action）
+def on_action(action: str, payload: dict, storage: dict) -> None:
+    """处理用户操作，直接修改 storage"""
+    s = storage.get("my-storage-id", {})
+    s["count"] = s.get("count", 0) + 1
 
-# 定时触发（使用装饰器）
-from scheduler.decorators import scheduled
-
-@scheduled("*/30 * * * *")  # 每30分钟
-async def collect(data: dict) -> dict:
-    """定时采集数据，返回更新后的 data"""
-    result = await fetch_external_data()
-    data["lastValue"] = result
-    return data
+# 初始化（安装时调用一次）
+def on_init(storage: dict) -> None:
+    """面板安装时初始化数据"""
+    s = storage.get("my-storage-id", {})
+    s["initialized"] = True
 ```
+
+定时采集用独立的 Task（不在 panel handler 中），通过 `POST /api/tasks` 创建。
 
 常用 cron 表达式：
 - `*/5 * * * *` - 每 5 分钟
@@ -101,26 +98,7 @@ async def collect(data: dict) -> dict:
 }
 ```
 
-**handler.py:**
-```python
-import httpx
-from scheduler.decorators import scheduled
-
-@scheduled("*/30 * * * *")
-async def collect(data: dict) -> dict:
-    location = data.get("location", "Singapore")
-    url = f"https://wttr.in/{location}?format=j1"
-    
-    async with httpx.AsyncClient() as client:
-        res = await client.get(url, timeout=10)
-        weather = res.json()
-    
-    current = weather["current_condition"][0]
-    data["temperature"] = int(current["temp_C"])
-    data["condition"] = current["weatherDesc"][0]["value"]
-    data["humidity"] = int(current["humidity"])
-    return data
-```
+**注意**：天气数据采集由独立 Task 完成（`POST /api/tasks`），Panel 只负责展示 storage 中的数据。
 
 **facade.html:**
 ```html
@@ -242,32 +220,7 @@ window.todoList = window.todoList || function() {
 }
 ```
 
-**handler.py:**
-```python
-import httpx
-from scheduler.decorators import scheduled
-
-@scheduled("0 * * * *")  # 每小时
-async def collect(data: dict) -> dict:
-    url = "https://hacker-news.firebaseio.com/v0/topstories.json"
-    
-    async with httpx.AsyncClient() as client:
-        res = await client.get(url)
-        story_ids = res.json()[:10]
-        
-        items = []
-        for sid in story_ids:
-            story_res = await client.get(f"https://hacker-news.firebaseio.com/v0/item/{sid}.json")
-            story = story_res.json()
-            items.append({
-                "title": story.get("title"),
-                "url": story.get("url"),
-                "score": story.get("score"),
-            })
-    
-    data["items"] = items
-    return data
-```
+**注意**：HN 数据采集由独立 Task 完成，Panel 只负责展示 storage 中的数据。
 
 ---
 
@@ -277,5 +230,5 @@ async def collect(data: dict) -> dict:
 2. **Panel ID** - facade 中用 `__PANEL_ID__` 占位符
 3. **数据持久化** - 用 `PATCH /api/panels/{id}/data`
 4. **异步 handler** - 推荐用 `async def`
-5. **定时任务** - 用 `@scheduled("cron")` 装饰器
+5. **定时任务** - 通过 Task API 创建独立 task，不在 panel handler 中
 6. **错误处理** - handler 中 catch 异常，避免整个采集失败

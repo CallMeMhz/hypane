@@ -6,7 +6,7 @@ AI-powered personal dashboard. Create and manage panels through chat.
 
 - 🎛️ **Panel System** - Drag & drop, resizable tiles with flow layout
 - 🤖 **AI Integration** - Create panels via natural language chat
-- ⏰ **Scheduled Tasks** - Auto-refresh with `@scheduled` decorator
+- ⏰ **Scheduled Tasks** - Cron-based tasks with APScheduler
 - 📱 **Responsive** - Dynamic columns, mobile-friendly
 - 🎨 **Dark Theme** - Obsidian-inspired Kabadoni theme
 
@@ -41,31 +41,21 @@ uv sync
 # Build frontend
 cd frontend && npm install && npm run build && cd ..
 
-# Run
+# Run (scheduler starts automatically with the app)
 uv run uvicorn app.main:app --reload
-
-# Run scheduler (separate terminal)
-uv run python -m scheduler.panel_scheduler
 ```
 
 ## Panel Architecture
 
 ```
 data/panels/{panel-id}/
-├── data.json      # Panel data & metadata
-├── facade.html    # Alpine.js template (reads from API)
-└── handler.py     # Optional: @scheduled tasks, handle_action
-```
+├── metadata.json  # Title, icon, size, storage_ids
+├── facade.html    # Jinja2 template (rendered with storage context)
+└── handler.py     # Optional: on_action, on_init
 
-**Handler Example:**
-```python
-from scheduler.decorators import scheduled
-
-@scheduled("0 * * * *")  # Every hour
-async def refresh_data(data: dict) -> dict:
-    # Fetch external data
-    data["value"] = await fetch_api()
-    return data
+data/tasks/{task-id}/
+├── metadata.json  # Schedule (cron), storage_ids, enabled
+└── handler.py     # on_schedule(storage)
 ```
 
 **Facade Example:**

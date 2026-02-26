@@ -10,7 +10,7 @@ Dashboard 由多个 Panel 组成，每个 Panel 是独立目录：
 data/panels/{panel_id}/
 ├── facade.html   # 外观 (Alpine.js + Tailwind)
 ├── data.json     # 数据 (元信息、状态)
-└── handler.py    # 后端逻辑 (可选，@scheduled 定时任务)
+└── handler.py    # 后端逻辑 (可选，on_action / on_init)
 ```
 
 ## 创建 Panel 的优先级
@@ -49,7 +49,7 @@ POST /api/panels
   "title": "自定义面板",
   "facade": "<div x-data>...</div>",
   "data": { },
-  "handler": "from scheduler.decorators import scheduled\n...",
+  "handler": "def on_action(action, payload, storage):\n    ...",
   "size": "3x4",
   "minSize": "3x2"
 }
