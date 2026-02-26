@@ -107,14 +107,10 @@
     color: var(--kb-text-faint);
   }
   
-  /* Header */
-  .dashboard-header {
+  /* Sidebar */
+  .dashboard-sidebar {
     background-color: var(--kb-bg-tertiary);
-    border-bottom: 1px solid var(--kb-border);
-  }
-  
-  .dashboard-header h1 {
-    color: var(--kb-text-primary);
+    border-right: 1px solid var(--kb-border);
   }
   
   
@@ -164,6 +160,7 @@ body {
   --dot-glow: var(--kb-accent);
   --dot-cell-w: calc((12 * 70px + 11 * 8px) / 12);
   --dot-cell-h: 70px;
+  --dot-offset-x: 0px;
   --dot-offset-y: 0px;
   --mouse-x: -9999px;
   --mouse-y: -9999px;
@@ -180,7 +177,7 @@ body::after {
   z-index: -1;
   background-image: radial-gradient(circle, var(--dot-color) var(--dot-size), transparent var(--dot-size));
   background-size: var(--dot-cell-w) var(--dot-cell-h);
-  background-position: center var(--dot-offset-y);
+  background-position: var(--dot-offset-x) var(--dot-offset-y);
 }
 
 /* Dim base layer */

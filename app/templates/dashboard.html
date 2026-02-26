@@ -1,90 +1,96 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="pt-3 pb-32">
-  <!-- Header -->
-  <header class="dashboard-header mb-3 flex items-center justify-between max-w-screen-xl mx-auto px-2">
-    <div>
-      <h1 class="text-2xl font-medium tracking-tight">Dashboard</h1>
-      <p class="text-sm mt-1" style="color: var(--kb-text-muted);">Personal assistant</p>
+<div class="flex h-screen overflow-hidden">
+  <!-- Sidebar -->
+  <aside class="dashboard-sidebar flex flex-col items-center py-4 gap-1 flex-shrink-0 w-12"
+         style="background: var(--kb-bg-tertiary); border-right: 1px solid var(--kb-border);">
+    <!-- Logo / Home -->
+    <div class="mb-3 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
+         style="background: var(--kb-accent); color: var(--kb-bg-primary);">
+      K
     </div>
-    
-    <div class="flex items-center gap-2">
-      <!-- Add Panel Button -->
-      <button 
-        onclick="window.openMarketModal()"
-        class="p-2 rounded-lg transition-colors"
-        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-        onmouseout="this.style.backgroundColor='transparent'"
-        title="Add Panel"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-      
-      <!-- Tasks Button -->
-      <button 
-        onclick="window.openTasksModal()"
-        class="p-2 rounded-lg transition-colors"
-        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-        onmouseout="this.style.backgroundColor='transparent'"
-        title="Scheduled Tasks"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
-      
-      <!-- Console -->
-      <a
-        href="/console"
-        class="p-2 rounded-lg transition-colors"
-        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-        onmouseout="this.style.backgroundColor='transparent'"
-        title="Resource Console"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      </a>
 
-      <!-- Theme Toggle -->
-      <button 
-        onclick="toggleTheme()"
-        class="p-2 rounded-lg transition-colors"
-        style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-        onmouseout="this.style.backgroundColor='transparent'"
-        title="Toggle theme"
-      >
-        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-        <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      </button>
+    <!-- Add Panel -->
+    <button
+      onclick="window.openMarketModal()"
+      class="p-2 rounded-lg transition-colors"
+      style="color: var(--kb-text-dim);"
+      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+      onmouseout="this.style.backgroundColor='transparent'"
+      title="Add Panel"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+
+    <!-- Tasks -->
+    <button
+      onclick="window.openTasksModal()"
+      class="p-2 rounded-lg transition-colors"
+      style="color: var(--kb-text-dim);"
+      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+      onmouseout="this.style.backgroundColor='transparent'"
+      title="Scheduled Tasks"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </button>
+
+    <!-- Console -->
+    <a
+      href="/console"
+      class="p-2 rounded-lg transition-colors"
+      style="color: var(--kb-text-dim);"
+      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+      onmouseout="this.style.backgroundColor='transparent'"
+      title="Resource Console"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    </a>
+
+    <!-- Spacer -->
+    <div class="flex-1"></div>
+
+    <!-- Theme Toggle (bottom) -->
+    <button
+      onclick="toggleTheme()"
+      class="p-2 rounded-lg transition-colors"
+      style="color: var(--kb-text-dim);"
+      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+      onmouseout="this.style.backgroundColor='transparent'"
+      title="Toggle theme"
+    >
+      <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      </svg>
+    </button>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto pt-3 pb-32">
+    <!-- Dashboard Panels Grid -->
+    <div id="dashboard-panels"
+         class="grid-stack"
+         hx-get="/dashboard-panels"
+         hx-trigger="refresh from:body">
+      {% for panel in panels %}
+        {% include "partials/panel.html" %}
+      {% else %}
+        <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
+          <p class="text-sm">No panels yet</p>
+          <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant to get started</p>
+        </div>
+      {% endfor %}
     </div>
-  </header>
-
-  <!-- Dashboard Panels Grid -->
-  <div id="dashboard-panels"
-       class="grid-stack"
-       hx-get="/dashboard-panels"
-       hx-trigger="refresh from:body">
-    {% for panel in panels %}
-      {% include "partials/panel.html" %}
-    {% else %}
-      <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
-        <p class="text-sm">No panels yet</p>
-        <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant to get started</p>
-      </div>
-    {% endfor %}
-  </div>
+  </main>
 </div>
 
 <!-- Tasks Modal -->
@@ -227,11 +233,13 @@
 </div>
 
 <script>
-// Dot grid — align vertical offset to grid top, track mouse
+// Dot grid — align offset to grid position, track mouse
 {
   const grid = document.getElementById('dashboard-panels');
   if (grid) {
-    document.body.style.setProperty('--dot-offset-y', grid.offsetTop + 'px');
+    const rect = grid.getBoundingClientRect();
+    document.body.style.setProperty('--dot-offset-x', rect.left + 'px');
+    document.body.style.setProperty('--dot-offset-y', rect.top + 'px');
   }
   document.addEventListener('mousemove', (e) => {
     document.body.style.setProperty('--mouse-x', e.clientX + 'px');
