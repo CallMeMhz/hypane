@@ -2,12 +2,10 @@
 
 {% block title %}Resource Console{% endblock %}
 
-{% block scripts %}{% endblock %}
-
 {% block content %}
-<div class="min-h-screen" x-data="consoleApp">
+<div class="h-screen flex flex-col" x-data="consoleApp">
   <!-- Header -->
-  <header class="px-4 py-3 flex items-center gap-4" style="background: var(--kb-bg-tertiary); border-bottom: 1px solid var(--kb-border);">
+  <header class="px-4 py-3 flex items-center gap-4 flex-shrink-0" style="background: var(--kb-bg-tertiary); border-bottom: 1px solid var(--kb-border);">
     <a href="/" class="p-1.5 rounded-lg transition-colors" style="color: var(--kb-text-dim);"
        onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
        onmouseout="this.style.backgroundColor='transparent'">
@@ -44,50 +42,67 @@
     </div>
   </header>
 
-  <!-- Content -->
-  <div class="max-w-3xl mx-auto px-4 py-6 space-y-8">
+  <!-- Three-column grid -->
+  <div class="flex-1 min-h-0 grid grid-cols-3 gap-4 p-4">
 
-    <!-- PANELS -->
-    <section>
-      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+    <!-- PANELS column -->
+    <div class="flex flex-col min-h-0">
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3 flex-shrink-0 flex items-center" style="color: var(--kb-text-muted);">
         Panels <span class="font-normal" x-text="'(' + panels.length + ')'"></span>
+        <span x-show="selectedType && selectedType !== 'panel'" class="ml-auto text-xs font-normal px-1.5 py-0.5 rounded"
+              style="background: color-mix(in srgb, var(--kb-blue) 20%, transparent); color: var(--kb-blue);"
+              x-text="matchedPanelCount + ' matched'"></span>
       </h2>
-      <div x-show="panels.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No panels</div>
-      <div class="space-y-2">
+      <div x-ref="panelsList" class="flex-1 overflow-y-auto space-y-2">
+        <div x-show="panels.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No panels</div>
         <template x-for="p in panels" :key="p.id">
-          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-opacity"
+               :data-matched="isPanelMatched(p)"
+               style="border: 1px solid var(--kb-border);"
+               :style="{
+                 borderColor: selectedType === 'panel' && selectedId === p.id ? 'var(--kb-blue)' : '',
+                 opacity: selectedType && !isPanelMatched(p) ? 0.3 : 1
+               }"
+               @click="select('panel', p.id)">
             <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-blue);"></span>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-sm" style="color: var(--kb-text-primary);" x-text="(p.icon || '') + ' ' + p.title"></span>
                 <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--kb-bg-tertiary); color: var(--kb-text-muted);" x-text="p.size"></span>
               </div>
-              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
-                <span x-show="p.storage_ids && p.storage_ids.length">
-                  storages: <span x-text="p.storage_ids.join(', ')"></span>
-                </span>
-                <span x-show="!p.storage_ids || !p.storage_ids.length" style="color: var(--kb-text-faint);">no storages</span>
-              </div>
+              <div class="text-xs mt-0.5 font-mono truncate" style="color: var(--kb-text-faint);" x-text="p.id"></div>
             </div>
-            <span class="text-xs font-mono flex-shrink-0" style="color: var(--kb-text-faint);" x-text="p.id"></span>
           </div>
         </template>
       </div>
-    </section>
+    </div>
 
-    <!-- STORAGES -->
-    <section>
-      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+    <!-- STORAGES column -->
+    <div class="flex flex-col min-h-0">
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3 flex-shrink-0 flex items-center" style="color: var(--kb-text-muted);">
         Storages <span class="font-normal" x-text="'(' + storages.length + ')'"></span>
-        <span x-show="orphanIds.length" class="ml-2 text-xs font-normal px-1.5 py-0.5 rounded" style="background: color-mix(in srgb, var(--kb-yellow) 20%, transparent); color: var(--kb-yellow);">
-          orphans: <span x-text="orphanIds.length"></span>
-        </span>
+        <template x-if="!selectedType || selectedType === 'storage'">
+          <span x-show="orphanIds.length" class="ml-2 text-xs font-normal px-1.5 py-0.5 rounded" style="background: color-mix(in srgb, var(--kb-yellow) 20%, transparent); color: var(--kb-yellow);">
+            orphans: <span x-text="orphanIds.length"></span>
+          </span>
+        </template>
+        <span x-show="selectedType && selectedType !== 'storage'" class="ml-auto text-xs font-normal px-1.5 py-0.5 rounded"
+              style="background: color-mix(in srgb, var(--kb-yellow) 20%, transparent); color: var(--kb-yellow);"
+              x-text="matchedStorageCount + ' matched'"></span>
       </h2>
-      <div x-show="storages.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No storages</div>
-      <div class="space-y-2">
+      <div x-ref="storagesList" class="flex-1 overflow-y-auto space-y-2">
+        <div x-show="storages.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No storages</div>
         <template x-for="s in storages" :key="s.id">
-          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);"
-               :style="orphanIds.includes(s.id) ? 'border-color: var(--kb-yellow);' : ''">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-opacity"
+               :data-matched="isStorageMatched(s)"
+               style="border: 1px solid var(--kb-border);"
+               :style="{
+                 borderColor: selectedType === 'storage' && selectedId === s.id
+                   ? 'var(--kb-yellow)'
+                   : orphanIds.includes(s.id) ? 'var(--kb-yellow)' : '',
+                 opacity: selectedType && !isStorageMatched(s) ? 0.3 : 1
+               }"
+               @click="select('storage', s.id)">
             <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-yellow);"></span>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
@@ -96,35 +111,31 @@
                   unused
                 </span>
               </div>
-              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
-                <template x-if="storageRefs[s.id] && storageRefs[s.id].length">
-                  <span x-text="storageRefs[s.id].map(r => r.type + ':' + r.name).join(', ')"></span>
-                </template>
-              </div>
             </div>
-            <!-- Delete button for orphans -->
-            <button x-show="orphanIds.includes(s.id)"
-                    @click="deleteStorage(s.id)"
-                    class="text-xs px-2 py-1 rounded transition-colors flex-shrink-0"
-                    style="border: 1px solid var(--kb-border); color: var(--kb-text-dim);"
-                    onmouseover="this.style.borderColor='var(--kb-red)'; this.style.color='var(--kb-red)'"
-                    onmouseout="this.style.borderColor='var(--kb-border)'; this.style.color='var(--kb-text-dim)'">
-              Delete
-            </button>
           </div>
         </template>
       </div>
-    </section>
+    </div>
 
-    <!-- TASKS -->
-    <section>
-      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: var(--kb-text-muted);">
+    <!-- TASKS column -->
+    <div class="flex flex-col min-h-0">
+      <h2 class="text-sm font-semibold uppercase tracking-wider mb-3 flex-shrink-0 flex items-center" style="color: var(--kb-text-muted);">
         Tasks <span class="font-normal" x-text="'(' + tasks.length + ')'"></span>
+        <span x-show="selectedType && selectedType !== 'task'" class="ml-auto text-xs font-normal px-1.5 py-0.5 rounded"
+              style="background: color-mix(in srgb, var(--kb-green) 20%, transparent); color: var(--kb-green);"
+              x-text="matchedTaskCount + ' matched'"></span>
       </h2>
-      <div x-show="tasks.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No tasks</div>
-      <div class="space-y-2">
+      <div x-ref="tasksList" class="flex-1 overflow-y-auto space-y-2">
+        <div x-show="tasks.length === 0" class="text-sm py-4" style="color: var(--kb-text-faint);">No tasks</div>
         <template x-for="t in tasks" :key="t.id">
-          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg" style="border: 1px solid var(--kb-border);">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-opacity"
+               :data-matched="isTaskMatched(t)"
+               style="border: 1px solid var(--kb-border);"
+               :style="{
+                 borderColor: selectedType === 'task' && selectedId === t.id ? 'var(--kb-green)' : '',
+                 opacity: selectedType && !isTaskMatched(t) ? 0.3 : 1
+               }"
+               @click="select('task', t.id)">
             <span class="w-1 h-8 rounded-full flex-shrink-0" style="background: var(--kb-green);"></span>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
@@ -132,18 +143,12 @@
                 <span x-show="t.schedule" class="text-xs font-mono px-1.5 py-0.5 rounded" style="background: var(--kb-bg-tertiary); color: var(--kb-text-muted);" x-text="t.schedule"></span>
                 <span x-show="!t.enabled" class="text-xs px-1.5 py-0.5 rounded" style="background: var(--kb-bg-hover); color: var(--kb-text-dim);">disabled</span>
               </div>
-              <div class="text-xs mt-0.5 truncate" style="color: var(--kb-text-dim);">
-                <span x-show="t.storage_ids && t.storage_ids.length">
-                  storages: <span x-text="t.storage_ids.join(', ')"></span>
-                </span>
-                <span x-show="!t.storage_ids || !t.storage_ids.length" style="color: var(--kb-text-faint);">no storages</span>
-              </div>
+              <div class="text-xs mt-0.5 font-mono truncate" style="color: var(--kb-text-faint);" x-text="t.id"></div>
             </div>
-            <span class="text-xs font-mono flex-shrink-0" style="color: var(--kb-text-faint);" x-text="t.id"></span>
           </div>
         </template>
       </div>
-    </section>
+    </div>
 
   </div>
 </div>
@@ -175,6 +180,87 @@
       tasks: window.__CONSOLE_DATA__.tasks,
       storageRefs: window.__CONSOLE_DATA__.storageRefs,
       orphanIds: window.__CONSOLE_DATA__.orphanIds,
+
+      selectedType: null,
+      selectedId: null,
+
+      select(type, id) {
+        if (this.selectedType === type && this.selectedId === id) {
+          this.selectedType = null;
+          this.selectedId = null;
+        } else {
+          this.selectedType = type;
+          this.selectedId = id;
+          this.$nextTick(() => this._scrollToFirstMatched());
+        }
+      },
+
+      _scrollToFirstMatched() {
+        for (const ref of [this.$refs.panelsList, this.$refs.storagesList, this.$refs.tasksList]) {
+          const first = ref.querySelector('[data-matched="true"]');
+          if (first) {
+            const containerTop = ref.getBoundingClientRect().top;
+            const itemTop = first.getBoundingClientRect().top;
+            if (itemTop < containerTop || itemTop > containerTop + ref.clientHeight) {
+              first.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            }
+          }
+        }
+      },
+
+      _getStorageIds(type, id) {
+        if (type === 'panel') {
+          const p = this.panels.find(p => p.id === id);
+          return p?.storage_ids || [];
+        }
+        if (type === 'storage') return [id];
+        if (type === 'task') {
+          const t = this.tasks.find(t => t.id === id);
+          return t?.storage_ids || [];
+        }
+        return [];
+      },
+
+      isPanelMatched(p) {
+        if (!this.selectedType) return true;
+        if (this.selectedType === 'panel') return p.id === this.selectedId;
+        const selSids = this._getStorageIds(this.selectedType, this.selectedId);
+        const pSids = p.storage_ids || [];
+        return pSids.some(sid => selSids.includes(sid));
+      },
+
+      isStorageMatched(s) {
+        if (!this.selectedType) return true;
+        if (this.selectedType === 'storage') return s.id === this.selectedId;
+        const selSids = this._getStorageIds(this.selectedType, this.selectedId);
+        return selSids.includes(s.id);
+      },
+
+      isTaskMatched(t) {
+        if (!this.selectedType) return true;
+        if (this.selectedType === 'task') return t.id === this.selectedId;
+        const selSids = this._getStorageIds(this.selectedType, this.selectedId);
+        const tSids = t.storage_ids || [];
+        if (this.selectedType === 'panel') {
+          return tSids.length > 0 && tSids.every(sid => selSids.includes(sid));
+        }
+        return tSids.some(sid => selSids.includes(sid));
+      },
+
+      get matchedPanelCount() {
+        if (!this.selectedType) return 0;
+        return this.panels.filter(p => this.isPanelMatched(p)).length;
+      },
+
+      get matchedStorageCount() {
+        if (!this.selectedType) return 0;
+        return this.storages.filter(s => this.isStorageMatched(s)).length;
+      },
+
+      get matchedTaskCount() {
+        if (!this.selectedType) return 0;
+        return this.tasks.filter(t => this.isTaskMatched(t)).length;
+      },
 
       async deleteStorage(storageId) {
         if (!confirm(`Delete orphan storage "${storageId}"?`)) return;
