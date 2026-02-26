@@ -1,0 +1,18 @@
+{
+  "id": "hackernews",
+  "name": "Hacker News",
+  "description": "Top stories and hot comments from Hacker News",
+  "icon": "message-square",
+  "headerColor": "orange",
+  "defaultSize": "4x5",
+  "minSize": "3x3",
+  "keywords": ["hackernews", "hn", "news", "hacker", "tech", "新闻"],
+  "storage_ids": ["hackernews"],
+  "defaultStorage": {
+    "hackernews": { "stories": [], "updated_at": null }
+  },
+  "task": {
+    "schedule": "0 */2 * * *",
+    "enabled": true
+  }
+}

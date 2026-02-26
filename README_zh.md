@@ -30,9 +30,9 @@
 
 ## 面板示例
 
-| 天气 | 海报 | 饼干点击器 | VPS CPU 负载 |
-|------|------|-----------|-------------|
-| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) |
+| 天气 | 海报 | 饼干点击器 | VPS CPU 负载 | Hacker News |
+|------|------|-----------|-------------|-------------|
+| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) | ![hacker news](screenshots/hacker_news.jpg) |
 
 ## 资源控制台
 

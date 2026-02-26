@@ -30,9 +30,9 @@
 
 ## Panel Examples
 
-| Weather | Poster | Cookie Clicker | VPS CPU Load |
-|---------|--------|----------------|--------------|
-| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) |
+| Weather | Poster | Cookie Clicker | VPS CPU Load | Hacker News |
+|---------|--------|----------------|--------------|-------------|
+| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) | ![hacker news](screenshots/hacker_news.jpg) |
 
 ## Resource Console
 
