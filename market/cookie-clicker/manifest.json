@@ -1,0 +1,16 @@
+{
+  "id": "cookie-clicker",
+  "name": "Cookie Clicker",
+  "description": "Click the cookie to score points, with particle effects and debounced sync",
+  "icon": "cookie",
+  "headerColor": "amber",
+  "defaultSize": "3x3",
+  "minSize": "3x3",
+  "keywords": ["cookie", "clicker", "game", "饼干", "点击", "游戏"],
+  "storage_ids": ["cookie-clicker"],
+  "defaultStorage": {
+    "cookie-clicker": {
+      "count": 0
+    }
+  }
+}

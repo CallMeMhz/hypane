@@ -30,9 +30,15 @@
 
 ## Panel Examples
 
-| Weather | Poster | Resource Console |
-|---------|--------|------------------|
-| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![console](screenshots/resource_console.jpg) |
+| Weather | Poster | Cookie Clicker | VPS CPU Load |
+|---------|--------|----------------|--------------|
+| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) |
+
+## Resource Console
+
+Manage all panels, storages, and tasks in one place. Click to filter and inspect relationships.
+
+<img src="screenshots/resource_console.jpg" alt="resource console" width="800">
 
 ## Architecture
 

@@ -19,7 +19,8 @@ market/
 ├── iframe/         # 嵌入网页
 ├── youtube/        # YouTube 视频
 ├── poster/         # 海报/图片展示
-└── countdown/      # 倒计时
+├── countdown/      # 倒计时
+└── cookie-clicker/ # 饼干点击器
 ```
 
 每个模板包含：

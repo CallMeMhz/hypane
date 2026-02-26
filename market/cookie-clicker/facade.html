@@ -1,0 +1,153 @@
+<div class="h-full flex flex-col items-center justify-center gap-2 overflow-hidden" style="background: radial-gradient(circle at 50% 40%, rgba(180, 120, 60, 0.15) 0%, transparent 60%);">
+  <style>
+    @keyframes cookie-float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(2deg); }
+    }
+    @keyframes cookie-press {
+      0% { transform: scale(1); }
+      40% { transform: scale(0.88) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes crumb-fly {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+    }
+    @keyframes plus-float {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+      100% { opacity: 0; transform: translate(-50%, -70px) scale(1.3); }
+    }
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(217, 170, 90, 0.2), 0 0 40px rgba(217, 170, 90, 0.1); }
+      50% { box-shadow: 0 0 30px rgba(217, 170, 90, 0.4), 0 0 60px rgba(217, 170, 90, 0.2); }
+    }
+    .cookie-zone {
+      position: relative;
+      animation: cookie-float 3s ease-in-out infinite;
+    }
+    .cookie-face {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 80px;
+      cursor: pointer;
+      user-select: none;
+      transition: filter 0.15s;
+      animation: glow-pulse 3s ease-in-out infinite;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cookie-face:hover {
+      filter: brightness(1.15);
+    }
+    .cookie-face:active {
+      animation: cookie-press 0.2s ease-out forwards;
+    }
+    .crumb {
+      position: absolute;
+      pointer-events: none;
+      font-size: 14px;
+      animation: crumb-fly 0.6s ease-out forwards;
+    }
+    .plus-num {
+      position: absolute;
+      left: 50%;
+      top: -10px;
+      pointer-events: none;
+      font-size: 22px;
+      font-weight: 800;
+      animation: plus-float 0.7s ease-out forwards;
+      color: var(--kb-yellow);
+      text-shadow: 0 1px 8px rgba(217, 170, 90, 0.6);
+    }
+    .cookie-count {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--kb-yellow), #e8a849);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .cookie-label {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--kb-text-ghost);
+    }
+  </style>
+
+  <div class="cookie-zone" id="cookie-zone-{{ panel.id }}">
+    <div
+      class="cookie-face"
+      onclick="cookieClick('{{ panel.id }}')"
+    >🍪</div>
+  </div>
+
+  <div class="flex flex-col items-center mt-1">
+    <span class="cookie-count" id="cookie-count-{{ panel.id }}">{{ "{:,}".format(storage['cookie-clicker'].get('count', 0)) }}</span>
+    <span class="cookie-label">cookies</span>
+  </div>
+
+  <script>
+    (function() {
+      var pid = '{{ panel.id }}';
+      var key = '_cookie_' + pid;
+
+      if (!window[key]) {
+        window[key] = { pending: 0, timer: null, base: {{ storage['cookie-clicker'].get('count', 0) }} };
+      }
+      window[key].base = {{ storage['cookie-clicker'].get('count', 0) }};
+      var s = window[key];
+      var el = document.getElementById('cookie-count-' + pid);
+      if (el) el.textContent = (s.base + s.pending).toLocaleString();
+
+      window.cookieClick = window.cookieClick || function(panelId) {
+        var k = '_cookie_' + panelId;
+        var state = window[k];
+        if (!state) return;
+
+        state.pending++;
+
+        var countEl = document.getElementById('cookie-count-' + panelId);
+        if (countEl) countEl.textContent = (state.base + state.pending).toLocaleString();
+
+        var zone = document.getElementById('cookie-zone-' + panelId);
+        if (zone) {
+          var crumbs = ['🍪','✨','🍪','✨','🍪'];
+          for (var i = 0; i < 5; i++) {
+            var c = document.createElement('span');
+            c.className = 'crumb';
+            c.textContent = crumbs[i];
+            var angle = Math.random() * 2 * Math.PI;
+            var dist = 40 + Math.random() * 50;
+            c.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+            c.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+            c.style.left = '50%'; c.style.top = '50%';
+            zone.appendChild(c);
+            setTimeout(function(el){ el.remove(); }, 600, c);
+          }
+          var p = document.createElement('span');
+          p.className = 'plus-num';
+          p.textContent = '+1';
+          zone.appendChild(p);
+          setTimeout(function(){ p.remove(); }, 700);
+        }
+
+        clearTimeout(state.timer);
+        state.timer = setTimeout(function() {
+          var amount = state.pending;
+          state.pending = 0;
+          fetch('/api/panels/' + panelId + '/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'click', payload: { amount: amount } })
+          }).then(function(res) {
+            if (res.ok) state.base += amount;
+          });
+        }, 800);
+      };
+    })();
+  </script>
+</div>

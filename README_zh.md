@@ -30,9 +30,15 @@
 
 ## 面板示例
 
-| 天气 | 海报 | 资源控制台 |
-|------|------|-----------|
-| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![console](screenshots/resource_console.jpg) |
+| 天气 | 海报 | 饼干点击器 | VPS CPU 负载 |
+|------|------|-----------|-------------|
+| ![weather](screenshots/weather.jpg) | ![poster](screenshots/poster.jpg) | ![cookie clicker](screenshots/cookie_clicker.jpg) | ![vps cpu load](screenshots/vps_cpu_load.jpg) |
+
+## 资源控制台
+
+在一个页面管理所有面板、存储和任务。点击筛选和查看关联关系。
+
+<img src="screenshots/resource_console.jpg" alt="resource console" width="800">
 
 ## 架构
 
