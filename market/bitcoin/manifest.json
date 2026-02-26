@@ -1,0 +1,26 @@
+{
+  "id": "bitcoin",
+  "name": "Bitcoin Price",
+  "description": "Real-time Bitcoin price with 24h sparkline",
+  "icon": "bitcoin",
+  "headerColor": "orange",
+  "defaultSize": "3x3",
+  "minSize": "2x2",
+  "keywords": ["bitcoin", "btc", "crypto", "price", "比特币", "加密货币"],
+  "storage_ids": ["bitcoin"],
+  "defaultStorage": {
+    "bitcoin": {
+      "price": null,
+      "change_24h": null,
+      "high_24h": null,
+      "low_24h": null,
+      "volume": null,
+      "sparkline": [],
+      "updated_at": null
+    }
+  },
+  "task": {
+    "schedule": "*/1 * * * *",
+    "enabled": true
+  }
+}

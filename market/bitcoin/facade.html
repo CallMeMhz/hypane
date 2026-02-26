@@ -1,0 +1,81 @@
+{% set data = storage.get('bitcoin', {}) %}
+{% set price = data.get('price') %}
+{% set change = data.get('change_24h') %}
+{% set high = data.get('high_24h') %}
+{% set low = data.get('low_24h') %}
+{% set volume = data.get('volume') %}
+{% set sparkline = data.get('sparkline', []) %}
+{% set updated = data.get('updated_at', '') %}
+
+{% if price is none %}
+<div class="flex items-center justify-center h-full text-gray-500 text-sm">
+  Loading price...
+</div>
+{% else %}
+
+{% set is_up = change is not none and change >= 0 %}
+
+<div class="flex flex-col h-full justify-between p-1">
+  <!-- Price + Change -->
+  <div>
+    <div class="text-2xl font-bold tracking-tight text-gray-100">
+      ${{ "{:,.0f}".format(price) }}
+    </div>
+    {% if change is not none %}
+    <div class="text-sm font-medium mt-0.5"
+         style="color: var({{ '--kb-green' if is_up else '--kb-red' }})">
+      {{ "+" if is_up else "" }}{{ "%.2f"|format(change) }}%
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sparkline SVG -->
+  {% if sparkline|length > 1 %}
+  {% set s_min = sparkline|min %}
+  {% set s_max = sparkline|max %}
+  {% set s_range = s_max - s_min if s_max != s_min else 1 %}
+  <div class="flex-1 my-2 min-h-0">
+    <svg viewBox="0 0 200 60" preserveAspectRatio="none" class="w-full h-full" style="overflow: visible">
+      <defs>
+        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var({{ '--kb-green' if is_up else '--kb-red' }})" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="var({{ '--kb-green' if is_up else '--kb-red' }})" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      {% set points = [] %}
+      {% for val in sparkline %}
+        {% set x = (loop.index0 / (sparkline|length - 1)) * 200 %}
+        {% set y = 60 - ((val - s_min) / s_range) * 56 - 2 %}
+        {% set _ = points.append("%.1f,%.1f"|format(x, y)) %}
+      {% endfor %}
+      <polygon
+        points="0,60 {{ points|join(' ') }} 200,60"
+        fill="url(#spark-fill)"/>
+      <polyline
+        points="{{ points|join(' ') }}"
+        fill="none"
+        stroke="var({{ '--kb-green' if is_up else '--kb-red' }})"
+        stroke-width="1.5"
+        stroke-linejoin="round"/>
+    </svg>
+  </div>
+  {% endif %}
+
+  <!-- Stats -->
+  <div class="grid grid-cols-3 gap-2 text-xs text-gray-500">
+    <div>
+      <div class="text-gray-600">High</div>
+      <div class="text-gray-300">${{ "{:,.0f}".format(high) }}</div>
+    </div>
+    <div>
+      <div class="text-gray-600">Low</div>
+      <div class="text-gray-300">${{ "{:,.0f}".format(low) }}</div>
+    </div>
+    <div>
+      <div class="text-gray-600">Vol</div>
+      <div class="text-gray-300">{{ volume }}</div>
+    </div>
+  </div>
+</div>
+
+{% endif %}

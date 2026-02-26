@@ -21,7 +21,8 @@ market/
 ├── poster/         # 海报/图片展示
 ├── countdown/      # 倒计时
 ├── cookie-clicker/ # 饼干点击器
-└── hackernews/     # Hacker News 热帖
+├── hackernews/     # Hacker News 热帖
+└── bitcoin/        # 比特币价格
 ```
 
 每个模板包含：
