@@ -1,89 +1,77 @@
 # Hypane
 
-AI-powered personal dashboard. Create and manage panels through chat.
+AI-powered personal dashboard. Create and manage panels through natural language chat.
+
+![screenshot](assets/screenshot.jpg)
 
 ## Features
 
-- 🎛️ **Panel System** - Drag & drop, resizable tiles with flow layout
-- 🤖 **AI Integration** - Create panels via natural language chat
-- ⏰ **Scheduled Tasks** - Cron-based tasks with APScheduler
-- 📱 **Responsive** - Dynamic columns, mobile-friendly
-- 🎨 **Dark Theme** - Obsidian-inspired Kabadoni theme
+- **Chat-driven** - Describe what you want, the AI agent creates panels with templates, handlers, and data
+- **Panel system** - Drag-and-drop tiles on a 12-column grid (GridStack), resizable, per-dashboard layout
+- **Multi-dashboard** - Multiple dashboards with a sidebar drawer to organize and reuse panels
+- **Scheduled tasks** - Cron-based background jobs that update panel data (APScheduler)
+- **Panel market** - Install pre-built panel templates with one click
+- **Dark theme** - Obsidian-inspired Kabadoni theme with CSS custom properties
 
 ## Tech Stack
 
-- **Backend**: Python 3.12+ / FastAPI / Jinja2
-- **Frontend**: HTMX 2.x / Alpine.js / Tailwind CSS 4.x
-- **Agent**: [Pi](https://github.com/mariozechner/pi-coding-agent) (CLI)
-- **Scheduler**: APScheduler
+| Layer | Tech |
+|-------|------|
+| Backend | Python 3.12+ / FastAPI / Jinja2 |
+| Database | MongoDB (Motor async driver) |
+| Frontend | HTMX / Alpine.js / GridStack / Tailwind CSS 4 |
+| Agent | [Pi](https://github.com/mariozechner/pi-coding-agent) coding agent (subprocess) |
+| Build | Vite / uv / Docker |
 
 ## Quick Start
 
-### Docker (Recommended)
+### Docker (recommended)
 
 ```bash
-# 1. Configure environment
 cp .env.example .env
-# Edit .env, set your API key
+# Edit .env — set your API key (Anthropic, OpenAI, Gemini, or OpenRouter)
 
-# 2. Run
 docker compose up -d
-
-# 3. Open http://localhost:8000
+# Open http://localhost:8000
 ```
 
 ### Local Development
 
 ```bash
-# Install dependencies
+# Prerequisites: Python 3.12+, Node.js 20+, MongoDB running locally
+
+# Backend
 uv sync
-
-# Build frontend
-cd frontend && npm install && npm run build && cd ..
-
-# Run (scheduler starts automatically with the app)
 uv run uvicorn app.main:app --reload
+
+# Frontend (separate terminal)
+cd frontend && npm install && npm run build
 ```
 
-## Panel Architecture
+Tailwind CSS is compiled via Vite, not CDN. Rebuild frontend after adding new utility classes.
 
-```
-data/panels/{panel-id}/
-├── metadata.json  # Title, icon, size, storage_ids
-├── facade.html    # Jinja2 template (rendered with storage context)
-└── handler.py     # Optional: on_action, on_init
+## How It Works
 
-data/tasks/{task-id}/
-├── metadata.json  # Schedule (cron), storage_ids, enabled
-└── handler.py     # on_schedule(storage)
-```
+Each panel is a self-contained unit stored in MongoDB:
 
-**Facade Example:**
-```html
-<div x-data="myPanel()" x-init="init()">
-  <span x-text="data.value"></span>
-</div>
-<script>
-window.myPanel = () => ({
-  data: {},
-  async init() {
-    const res = await fetch('/api/panels/__PANEL_ID__/data');
-    this.data = await res.json();
-  }
-});
-</script>
-```
+- **Template** - Jinja2 HTML rendered with storage context (the panel's visual face)
+- **Handler** - Optional Python module with `on_action(action, payload, storage)` for interactivity
+- **Storage** - Shared JSON data containers referenced by ID; panels and tasks can share the same storage
+
+Dashboards hold references to panels with per-dashboard position and size. The same panel can appear on multiple dashboards.
+
+The AI agent (Pi) receives system context about existing panels, storages, and dashboard state, then uses tools (`panel_create`, `storage_update`, `task_create`, etc.) to build panels on your behalf.
 
 ## Environment Variables
 
+See [`.env.example`](.env.example) for the full list. Key variables:
+
 | Variable | Description |
 |----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `OPENAI_API_KEY` | OpenAI API key |
-| `PI_PROVIDER` | Default provider (anthropic/openai/custom) |
-| `PI_MODEL` | Default model |
-
-See `.env.example` for custom provider setup.
+| `PI_PROVIDER` | LLM provider: `anthropic`, `openai`, `gemini`, `openrouter`, or `custom` |
+| `PI_MODEL` | Model name (e.g., `claude-sonnet-4-20250514`) |
+| `ANTHROPIC_API_KEY` | API key for your chosen provider |
+| `MONGO_DSN` | MongoDB connection string (auto-configured in Docker) |
 
 ## License
 

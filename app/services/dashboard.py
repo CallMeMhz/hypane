@@ -146,14 +146,16 @@ async def remove_panel_from_layout(panel_id: str, dashboard_id: str = "default")
 async def update_panel_positions(
     updates: dict[str, dict], dashboard_id: str = "default"
 ) -> None:
-    """Batch update panel positions."""
+    """Batch update panel positions and sizes."""
     layout = await get_dashboard_layout(dashboard_id)
 
     for p in layout.get("panels", []):
         panel_id = p.get("id")
         if panel_id in updates:
-            pos = updates[panel_id]
-            p["position"] = {"x": pos["x"], "y": pos["y"]}
+            u = updates[panel_id]
+            p["position"] = {"x": u["x"], "y": u["y"]}
+            if u.get("w") and u.get("h"):
+                p["size"] = f"{u['w']}x{u['h']}"
 
     await save_dashboard_layout(layout, dashboard_id)
 

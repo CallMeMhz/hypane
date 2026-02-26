@@ -47,6 +47,8 @@ class PositionUpdate(BaseModel):
     id: str
     x: int
     y: int
+    w: int | None = None
+    h: int | None = None
 
 
 class PositionsUpdateRequest(BaseModel):
@@ -55,10 +57,10 @@ class PositionsUpdateRequest(BaseModel):
 
 @router.post("/positions")
 async def update_positions(request: PositionsUpdateRequest, dashboard_id: str = "default"):
-    """Batch update panel positions after drag/resize."""
+    """Batch update panel positions and sizes after drag/resize."""
     from app.services.dashboard import update_panel_positions
 
-    updates = {p.id: {"x": p.x, "y": p.y} for p in request.panels}
+    updates = {p.id: {"x": p.x, "y": p.y, "w": p.w, "h": p.h} for p in request.panels}
     await update_panel_positions(updates, dashboard_id)
 
     return {"success": True}

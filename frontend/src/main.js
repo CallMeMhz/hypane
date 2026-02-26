@@ -139,7 +139,9 @@ async function savePositions(items) {
   const updates = nodes.map(n => ({
     id: n.el?.getAttribute('data-panel-id') || n.id || '',
     x: n.x,
-    y: n.y
+    y: n.y,
+    w: n.w,
+    h: n.h
   })).filter(u => u.id)
 
   if (updates.length === 0) return
