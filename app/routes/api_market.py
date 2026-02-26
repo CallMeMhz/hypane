@@ -44,7 +44,7 @@ class InstallRequest(BaseModel):
 
 
 @router.post("/{panel_type}/install")
-async def install_panel(panel_type: str, request: InstallRequest):
+async def install_panel(panel_type: str, request: InstallRequest, dashboard_id: str = "default"):
     """从市场安装 Panel"""
     import random
     from datetime import datetime
@@ -71,7 +71,7 @@ async def install_panel(panel_type: str, request: InstallRequest):
 
     size = request.size or template.get("defaultSize", "3x2")
 
-    await add_panel_to_layout(panel_id, size=size)
+    await add_panel_to_layout(panel_id, size=size, dashboard_id=dashboard_id)
 
     return {
         "success": True,

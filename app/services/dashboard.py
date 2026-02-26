@@ -188,3 +188,56 @@ async def get_dashboard(enrich: bool = True, dashboard_id: str = "default") -> d
 async def save_dashboard(data: dict[str, Any], dashboard_id: str = "default") -> None:
     """Save full dashboard."""
     await save_dashboard_layout(data, dashboard_id)
+
+
+async def list_dashboards(user_id: str = "default") -> list[dict]:
+    """List all dashboards for a user."""
+    cursor = db.dashboards_col().find({"user_id": user_id})
+    return [
+        {
+            "id": doc["_id"],
+            "name": doc.get("name", doc["_id"]),
+            "panel_count": len(doc.get("panels", [])),
+        }
+        async for doc in cursor
+    ]
+
+
+async def create_dashboard(dashboard_id: str, name: str, user_id: str = "default") -> dict:
+    """Create a new dashboard."""
+    doc = {
+        "_id": dashboard_id,
+        "user_id": user_id,
+        "name": name,
+        "version": 2,
+        "panels": [],
+        "userPreferences": {},
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+    }
+    await db.dashboards_col().insert_one(doc)
+    return {"id": dashboard_id, "name": name}
+
+
+async def rename_dashboard(dashboard_id: str, name: str) -> bool:
+    """Rename a dashboard."""
+    r = await db.dashboards_col().update_one(
+        {"_id": dashboard_id}, {"$set": {"name": name, "updated_at": datetime.now()}}
+    )
+    return r.modified_count > 0
+
+
+async def delete_dashboard(dashboard_id: str) -> bool:
+    """Delete a dashboard (not the panels on it)."""
+    if dashboard_id == "default":
+        return False
+    r = await db.dashboards_col().delete_one({"_id": dashboard_id})
+    return r.deleted_count > 0
+
+
+async def remove_panel_from_all_dashboards(panel_id: str) -> None:
+    """Remove a panel from all dashboards (used when panel is deleted)."""
+    await db.dashboards_col().update_many(
+        {"panels.id": panel_id},
+        {"$pull": {"panels": {"id": panel_id}}, "$set": {"updated_at": datetime.now()}},
+    )

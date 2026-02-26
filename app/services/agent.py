@@ -13,19 +13,20 @@ from app.services.tasks_v2 import get_scheduled_tasks
 STREAM_LIMIT = 10 * 1024 * 1024
 
 
-async def get_system_context() -> str:
+async def get_system_context(dashboard_id: str = "default") -> str:
     """Generate system context with current time, dashboard outline, and scheduled tasks."""
     now = datetime.now()
 
     # Time
     lines = [f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} (local)"]
+    lines.append(f"Dashboard ID: {dashboard_id}")
 
     # Dashboard outline
-    dashboard = await get_dashboard()
+    dashboard = await get_dashboard(dashboard_id=dashboard_id)
     panels = dashboard.get("panels", [])
 
     if panels:
-        lines.append(f"\nDashboard ({len(panels)} panels):")
+        lines.append(f"\nDashboard '{dashboard_id}' ({len(panels)} panels):")
         for i, panel in enumerate(panels):
             panel_id = panel.get("id", "?")
             panel_title = panel.get("title", "(no title)")
@@ -34,7 +35,7 @@ async def get_system_context() -> str:
             desc_str = f" - {panel_desc}" if panel_desc else ""
             lines.append(f"  {i+1}. [{panel_id}] {panel_title} ({panel_size}){desc_str}")
     else:
-        lines.append("\nDashboard: empty (no panels)")
+        lines.append(f"\nDashboard '{dashboard_id}': empty (no panels)")
 
     # Scheduled tasks
     tasks = await get_scheduled_tasks()
@@ -48,7 +49,7 @@ async def get_system_context() -> str:
     return "\n".join(lines)
 
 
-async def run_agent_chat(message: str) -> dict:
+async def run_agent_chat(message: str, dashboard_id: str = "default") -> dict:
     """Run pi agent with a chat message and return response (non-streaming)."""
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -99,7 +100,9 @@ async def run_agent_chat(message: str) -> dict:
         }
 
 
-async def run_agent_stream(message: str, session_id: Optional[str] = None) -> AsyncIterator[str]:
+async def run_agent_stream(
+    message: str, session_id: Optional[str] = None, dashboard_id: str = "default"
+) -> AsyncIterator[str]:
     """
     Stream agent response using pi --mode json (JSONL streaming).
     
@@ -116,7 +119,7 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
         session_file = None
 
     # Prepend system context to message
-    system_context = await get_system_context()
+    system_context = await get_system_context(dashboard_id)
     full_message = f"[{system_context}]\n\n{message}"
 
     cmd = [
@@ -139,12 +142,15 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
 
     # 使用更大的 limit 来处理长行
     # cwd 限制在项目目录，防止访问其他项目
+    import os
+    env = {**os.environ, "DASHBOARD_ID": dashboard_id}
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         limit=STREAM_LIMIT,
         cwd=BASE_DIR,
+        env=env,
     )
 
     dashboard_updated = False

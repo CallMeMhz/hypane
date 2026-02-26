@@ -54,12 +54,12 @@ class PositionsUpdateRequest(BaseModel):
 
 
 @router.post("/positions")
-async def update_positions(request: PositionsUpdateRequest):
+async def update_positions(request: PositionsUpdateRequest, dashboard_id: str = "default"):
     """Batch update panel positions after drag/resize."""
     from app.services.dashboard import update_panel_positions
 
     updates = {p.id: {"x": p.x, "y": p.y} for p in request.panels}
-    await update_panel_positions(updates)
+    await update_panel_positions(updates, dashboard_id)
 
     return {"success": True}
 
@@ -82,8 +82,8 @@ async def get_panel(panel_id: str):
 
 
 @router.post("")
-async def create_panel(request: PanelCreateRequest):
-    """Create a new panel."""
+async def create_panel(request: PanelCreateRequest, dashboard_id: str = "default"):
+    """Create a new panel and add to specified dashboard."""
     from datetime import datetime
 
     from app.services.dashboard import add_panel_to_layout
@@ -107,7 +107,7 @@ async def create_panel(request: PanelCreateRequest):
         handler=request.handler,
     )
 
-    await add_panel_to_layout(panel_id, request.position, request.size or "3x2")
+    await add_panel_to_layout(panel_id, request.position, request.size or "3x2", dashboard_id)
 
     return p
 
@@ -126,7 +126,7 @@ async def update_panel(panel_id: str, request: PanelUpdateRequest):
 async def delete_panel(panel_id: str):
     """Delete a panel with cascade soft-delete of exclusively-owned storages and tasks."""
     from app.services import tasks_v2 as task_service
-    from app.services.dashboard import remove_panel_from_layout
+    from app.services.dashboard import remove_panel_from_all_dashboards
 
     panel = await panels.get_panel(panel_id)
     if not panel:
@@ -156,7 +156,7 @@ async def delete_panel(panel_id: str):
             deleted_storages.append(sid)
 
     await panels.delete_panel(panel_id)
-    await remove_panel_from_layout(panel_id)
+    await remove_panel_from_all_dashboards(panel_id)
 
     return {
         "success": True,
@@ -165,6 +165,37 @@ async def delete_panel(panel_id: str):
             "tasks": deleted_tasks,
         },
     }
+
+
+# === Dashboard Drawer Operations ===
+
+@router.post("/{panel_id}/add-to-dashboard")
+async def add_to_dashboard(
+    panel_id: str,
+    dashboard_id: str = "default",
+    x: int | None = None,
+    y: int | None = None,
+):
+    """Add an existing panel to a dashboard. Supports duplicates and optional grid position."""
+    from app.services.dashboard import add_panel_to_layout
+
+    panel = await panels.get_panel(panel_id)
+    if not panel:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    position = {"x": x, "y": y} if x is not None and y is not None else None
+    await add_panel_to_layout(
+        panel_id, position=position, size=panel.get("size", "3x2"), dashboard_id=dashboard_id
+    )
+    return {"success": True}
+
+
+@router.post("/{panel_id}/remove-from-dashboard")
+async def remove_from_dashboard(panel_id: str, dashboard_id: str = "default"):
+    """Remove a panel from a dashboard (panel itself is not deleted)."""
+    from app.services.dashboard import remove_panel_from_layout
+
+    await remove_panel_from_layout(panel_id, dashboard_id)
+    return {"success": True}
 
 
 # === Template & Handler ===

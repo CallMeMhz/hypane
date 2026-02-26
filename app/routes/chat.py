@@ -1,7 +1,8 @@
+from typing import Optional
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
 
 from app.services.agent import run_agent_chat, run_agent_stream
 
@@ -11,12 +12,13 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    dashboard_id: str = "default"
 
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
     """Handle chat message, call agent, return response (non-streaming)."""
-    result = await run_agent_chat(request.message)
+    result = await run_agent_chat(request.message, dashboard_id=request.dashboard_id)
     return JSONResponse(
         content={
             "reply": result["reply"],
@@ -35,7 +37,7 @@ async def chat_stream(request: ChatRequest):
     Otherwise, each request is independent (agent uses tools to see history).
     """
     return StreamingResponse(
-        run_agent_stream(request.message, request.session_id),
+        run_agent_stream(request.message, request.session_id, request.dashboard_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -8,6 +8,7 @@ from app import config, db
 from app.config import STATIC_DIR, TEMPLATES_DIR
 from app.routes import (
     api_agent,
+    api_dashboards,
     api_market,
     api_panels,
     api_storage,
@@ -53,6 +54,7 @@ app.include_router(dashboard.router)
 app.include_router(console.router)
 app.include_router(panels.router)
 app.include_router(api_panels.router)
+app.include_router(api_dashboards.router)
 app.include_router(api_market.router)
 app.include_router(api_storage.router)
 app.include_router(api_tasks.router)

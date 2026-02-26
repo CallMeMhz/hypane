@@ -1,126 +1,199 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex h-screen overflow-hidden">
-  <!-- Sidebar -->
+<div class="flex h-screen overflow-hidden" x-data="dashboardSidebar">
+  <!-- Sidebar (48px, always visible — never re-rendered on dashboard switch) -->
   <aside class="dashboard-sidebar flex flex-col items-center py-4 gap-1 flex-shrink-0 w-12"
          style="background: var(--kb-bg-tertiary); border-right: 1px solid var(--kb-border);">
-    <!-- Logo / Home -->
     <div class="mb-3 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
-         style="background: var(--kb-accent); color: var(--kb-bg-primary);">
-      K
-    </div>
+         style="background: var(--kb-accent); color: var(--kb-bg-primary);">K</div>
 
-    <!-- Add Panel -->
-    <button
-      onclick="window.openMarketModal()"
-      class="p-2 rounded-lg transition-colors"
-      style="color: var(--kb-text-dim);"
-      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-      onmouseout="this.style.backgroundColor='transparent'"
-      title="Add Panel"
-    >
+    <!-- Drawer toggle -->
+    <button @click="drawerOpen = !drawerOpen"
+            class="p-2 rounded-lg transition-colors"
+            :style="{ color: drawerOpen ? 'var(--kb-accent)' : 'var(--kb-text-dim)' }"
+            @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+            @mouseout="$el.style.backgroundColor='transparent'"
+            title="Panel drawer">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
       </svg>
     </button>
 
-    <!-- Tasks -->
-    <button
-      onclick="window.openTasksModal()"
-      class="p-2 rounded-lg transition-colors"
-      style="color: var(--kb-text-dim);"
-      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-      onmouseout="this.style.backgroundColor='transparent'"
-      title="Scheduled Tasks"
-    >
+    <button onclick="window.openMarketModal()" class="p-2 rounded-lg transition-colors"
+            style="color: var(--kb-text-dim);"
+            @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+            @mouseout="$el.style.backgroundColor='transparent'" title="Add Panel">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
     </button>
 
-    <!-- Console -->
-    <a
-      href="/console"
-      class="p-2 rounded-lg transition-colors"
-      style="color: var(--kb-text-dim);"
-      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-      onmouseout="this.style.backgroundColor='transparent'"
-      title="Resource Console"
-    >
+    <button onclick="window.openTasksModal()" class="p-2 rounded-lg transition-colors"
+            style="color: var(--kb-text-dim);"
+            @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+            @mouseout="$el.style.backgroundColor='transparent'" title="Scheduled Tasks">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </button>
+
+    <a href="/console" class="p-2 rounded-lg transition-colors"
+       style="color: var(--kb-text-dim);"
+       @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+       @mouseout="$el.style.backgroundColor='transparent'" title="Resource Console">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
     </a>
 
-    <!-- Spacer -->
     <div class="flex-1"></div>
 
-    <!-- Theme Toggle (bottom) -->
-    <button
-      onclick="toggleTheme()"
-      class="p-2 rounded-lg transition-colors"
-      style="color: var(--kb-text-dim);"
-      onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-      onmouseout="this.style.backgroundColor='transparent'"
-      title="Toggle theme"
-    >
+    <button onclick="toggleTheme()" class="p-2 rounded-lg transition-colors"
+            style="color: var(--kb-text-dim);"
+            @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+            @mouseout="$el.style.backgroundColor='transparent'" title="Toggle theme">
       <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
       <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-      </svg>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
     </button>
   </aside>
 
-  <!-- Main content -->
-  <main class="flex-1 overflow-y-auto pt-3 pb-32">
-    <!-- Dashboard Panels Grid -->
-    <div id="dashboard-panels"
-         class="grid-stack"
-         hx-get="/dashboard-panels"
-         hx-trigger="refresh from:body">
-      {% for panel in panels %}
-        {% include "partials/panel.html" %}
-      {% else %}
-        <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
-          <p class="text-sm">No panels yet</p>
-          <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant to get started</p>
-        </div>
-      {% endfor %}
+  <!-- Drawer backdrop -->
+  <div x-show="drawerOpen" x-cloak data-drawer-overlay
+       class="fixed top-0 bottom-0 right-0 z-30"
+       style="left: 48px;"
+       @click="drawerOpen = false"></div>
+
+  <!-- Floating drawer -->
+  <div x-show="drawerOpen" x-cloak data-drawer-overlay
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 -translate-x-2"
+       x-transition:enter-end="opacity-100 translate-x-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100 translate-x-0"
+       x-transition:leave-end="opacity-0 -translate-x-2"
+       class="fixed top-0 bottom-0 z-40 w-56 flex flex-col overflow-hidden"
+       style="left: 48px; background: var(--kb-bg-secondary); border-right: 1px solid var(--kb-border); box-shadow: 4px 0 12px rgba(0,0,0,0.15);">
+
+    <!-- Dashboards (Alpine-driven, no Jinja2 loop) -->
+    <div class="px-3 pt-4 pb-2">
+      <div class="text-xs font-medium mb-2 px-1" style="color: var(--kb-text-faint);">Dashboards</div>
+      <template x-for="d in dashboards" :key="d.id">
+        <button @click="switchDashboard(d.id)"
+                class="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs truncate w-full transition-colors mb-0.5"
+                :style="{
+                  color: currentDashboardId === d.id ? 'var(--kb-text-primary)' : 'var(--kb-text-muted)',
+                  background: currentDashboardId === d.id ? 'var(--kb-bg-hover)' : 'transparent'
+                }">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          <span class="truncate" x-text="d.name"></span>
+          <span class="ml-auto text-xs" style="color: var(--kb-text-ghost);" x-text="d.panel_count"></span>
+        </button>
+      </template>
+      <button @click="openCreateModal()"
+              class="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs w-full transition-colors"
+              style="color: var(--kb-text-dim);"
+              @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+              @mouseout="$el.style.backgroundColor='transparent'">
+        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+        <span>New dashboard</span>
+      </button>
     </div>
-  </main>
+
+    <div class="mx-3" style="border-top: 1px solid var(--kb-border);"></div>
+
+    <!-- All Panels (draggable into grid via GridStack.setupDragIn) -->
+    <div class="px-3 pt-2 pb-4 flex-1 overflow-y-auto" id="drawer-panel-list">
+      <div class="text-xs font-medium mb-2 px-1" style="color: var(--kb-text-faint);">
+        All Panels
+        <span class="font-normal" style="color: var(--kb-text-ghost);">- click or drag</span>
+      </div>
+      <template x-for="p in allPanels" :key="p.id">
+        <div class="drawer-panel-item"
+             :gs-w="panelW(p)" :gs-h="panelH(p)"
+             :data-panel-id="p.id"
+             @click="addPanel(p.id)">
+          <div class="grid-stack-item-content flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors mb-0.5"
+               style="color: var(--kb-text-muted); cursor: grab;"
+               @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+               @mouseout="$el.style.backgroundColor='transparent'">
+            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--kb-text-ghost);">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+            <span class="truncate" x-text="p.title"></span>
+            <span class="ml-auto flex-shrink-0" style="color: var(--kb-text-ghost);" x-text="p.size || '3x2'"></span>
+          </div>
+        </div>
+      </template>
+      <div x-show="allPanels.length === 0" class="text-xs px-1 py-2" style="color: var(--kb-text-ghost);">
+        No panels created yet
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content (this div is the HTMX swap target for dashboard switch) -->
+  <div id="dashboard-content" class="flex-1 flex flex-col overflow-hidden">
+    {% include "partials/dashboard_content.html" %}
+  </div>
+
+  <!-- Create Dashboard Modal -->
+  <div x-show="showCreateModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center"
+       @keydown.escape.window="if (showCreateModal) { showCreateModal = false; $event.stopPropagation(); }">
+    <div class="modal-overlay absolute inset-0" @click="showCreateModal = false"></div>
+    <div class="modal-content relative rounded-lg shadow-2xl w-full max-w-sm overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--kb-border);">
+        <h2 class="text-base font-medium" style="color: var(--kb-text-primary);">New Dashboard</h2>
+        <button @click="showCreateModal = false" class="p-1 rounded" style="color: var(--kb-text-dim);">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="px-6 py-4">
+        <label class="block text-xs mb-1.5" style="color: var(--kb-text-muted);">Dashboard Name</label>
+        <input x-model="newDashboardName" x-ref="dashboardNameInput"
+               @keydown.enter="submitCreateDashboard()"
+               class="w-full px-3 py-2 rounded-lg text-sm"
+               style="background: var(--kb-bg-primary); border: 1px solid var(--kb-border); color: var(--kb-text-primary); outline: none;"
+               @focus="$el.style.borderColor='var(--kb-accent)'"
+               @blur="$el.style.borderColor='var(--kb-border)'"
+               placeholder="e.g. Work, Home..." />
+        <div class="mt-2 text-xs" style="color: var(--kb-text-ghost);">
+          ID: <span x-text="generatedId"></span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 px-6 py-3" style="border-top: 1px solid var(--kb-border);">
+        <button @click="showCreateModal = false"
+                class="px-4 py-1.5 text-sm rounded-lg transition-colors"
+                style="color: var(--kb-text-muted);"
+                @mouseover="$el.style.backgroundColor='var(--kb-bg-hover)'"
+                @mouseout="$el.style.backgroundColor='transparent'">Cancel</button>
+        <button @click="submitCreateDashboard()"
+                :disabled="!newDashboardName.trim()"
+                class="px-4 py-1.5 text-sm rounded-lg disabled:opacity-50"
+                style="background: var(--kb-accent); color: var(--kb-bg-primary);">Create</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Tasks Modal -->
-<div id="tasks-modal" 
-     x-data="tasksModal" 
-     x-show="open" 
-     x-cloak
+<div id="tasks-modal" x-data="tasksModal" x-show="open" x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center"
      @keydown.escape.window="open = false">
-  <!-- Backdrop -->
   <div class="modal-overlay absolute inset-0" @click="open = false"></div>
-  
-  <!-- Modal -->
   <div class="modal-content relative rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-    <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--kb-border);">
       <h2 class="text-lg font-medium" style="color: var(--kb-text-primary);">Scheduled Tasks</h2>
       <button @click="open = false" class="p-1 rounded" style="color: var(--kb-text-dim);">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    
-    <!-- Content -->
     <div class="px-6 py-4 overflow-y-auto max-h-[60vh]">
       <div x-show="loading" class="text-center py-8" style="color: var(--kb-text-dim);">Loading...</div>
-      
       <div x-show="!loading && tasks.length === 0" class="text-center py-8" style="color: var(--kb-text-dim);">No scheduled tasks</div>
-      
       <div x-show="!loading && tasks.length > 0" class="space-y-3">
         <template x-for="task in tasks" :key="task.id">
           <div class="p-4 rounded-lg" style="border: 1px solid var(--kb-border);">
@@ -130,23 +203,14 @@
                   <span class="font-medium" style="color: var(--kb-text-primary);" x-text="task.name"></span>
                   <span x-show="!task.enabled" class="px-1.5 py-0.5 text-xs rounded" style="background: var(--kb-bg-hover); color: var(--kb-text-dim);">disabled</span>
                 </div>
-                <div class="text-sm mt-1" style="color: var(--kb-text-muted);">
-                  <span class="font-mono" x-text="task.schedule"></span>
-                </div>
-                <!-- Last Run -->
+                <div class="text-sm mt-1" style="color: var(--kb-text-muted);"><span class="font-mono" x-text="task.schedule"></span></div>
                 <div x-show="task.last_run" class="mt-2 text-xs" style="color: var(--kb-text-muted);">
-                  Last run: <span x-text="task.last_run ? formatTime(task.last_run) : ''"></span>
-                </div>
+                  Last run: <span x-text="task.last_run ? formatTime(task.last_run) : ''"></span></div>
                 <div x-show="!task.last_run" class="mt-2 text-xs" style="color: var(--kb-text-faint);">Never run</div>
               </div>
-              
-              <!-- Run Button -->
-              <button 
-                @click="runTask(task.id)"
-                :disabled="runningTask === task.id"
-                class="px-3 py-1.5 text-sm rounded-lg disabled:opacity-50"
-                style="border: 1px solid var(--kb-border); color: var(--kb-text-muted);"
-              >
+              <button @click="runTask(task.id)" :disabled="runningTask === task.id"
+                      class="px-3 py-1.5 text-sm rounded-lg disabled:opacity-50"
+                      style="border: 1px solid var(--kb-border); color: var(--kb-text-muted);">
                 <span x-show="runningTask !== task.id">Run Now</span>
                 <span x-show="runningTask === task.id">Running...</span>
               </button>
@@ -159,70 +223,50 @@
 </div>
 
 <!-- Market Modal -->
-<div id="market-modal" 
-     x-data="marketModal" 
-     x-show="open" 
-     x-cloak
+<div id="market-modal" x-data="marketModal" x-show="open" x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center"
      @keydown.escape.window="open = false">
-  <!-- Backdrop -->
   <div class="modal-overlay absolute inset-0" @click="open = false"></div>
-  
-  <!-- Modal -->
   <div class="modal-content relative rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-    <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--kb-border);">
       <h2 class="text-lg font-medium" style="color: var(--kb-text-primary);">Add Panel</h2>
       <button @click="open = false" class="p-1 rounded" style="color: var(--kb-text-dim);">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    
-    <!-- Content -->
     <div class="px-6 py-4 overflow-y-auto max-h-[60vh]">
       <div x-show="loading" class="text-center py-8" style="color: var(--kb-text-dim);">Loading...</div>
-      
-      <!-- Panel Grid - click to install directly -->
       <div x-show="!loading" class="grid grid-cols-2 gap-3">
         <template x-for="panel in panels" :key="panel.id">
-          <button 
-            @click="installDirect(panel)"
-            :disabled="installing === panel.id"
-            class="p-4 rounded-lg text-left transition-colors disabled:opacity-50"
-            style="border: 1px solid var(--kb-border);"
-            onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
-            onmouseout="this.style.backgroundColor='transparent'"
-          >
+          <button @click="installDirect(panel)" :disabled="installing === panel.id"
+                  class="p-4 rounded-lg text-left transition-colors disabled:opacity-50"
+                  style="border: 1px solid var(--kb-border);"
+                  onmouseover="this.style.backgroundColor='var(--kb-bg-hover)'"
+                  onmouseout="this.style.backgroundColor='transparent'">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl" 
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
                    :style="'background: var(--kb-' + panel.headerColor + ');'">
-                <span x-text="getEmoji(panel.icon)"></span>
-              </div>
+                <span x-text="getEmoji(panel.icon)"></span></div>
               <div class="flex-1 min-w-0">
                 <div class="font-medium" style="color: var(--kb-text-primary);" x-text="panel.name"></div>
-                <div class="text-xs truncate" style="color: var(--kb-text-muted);" x-text="panel.description"></div>
-              </div>
+                <div class="text-xs truncate" style="color: var(--kb-text-muted);" x-text="panel.description"></div></div>
               <div x-show="installing === panel.id" class="ml-2">
                 <svg class="w-4 h-4 animate-spin" style="color: var(--kb-text-muted);" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               </div>
             </div>
           </button>
         </template>
       </div>
-      
-      <!-- Error -->
       <div x-show="error" class="mt-3 text-sm text-center" style="color: var(--kb-red);" x-text="error"></div>
     </div>
   </div>
 </div>
 
 <script>
-// Dot grid — align offset to grid position, track mouse
+// Dot grid
 {
   const grid = document.getElementById('dashboard-panels');
   if (grid) {
@@ -238,154 +282,153 @@
 
 function toggleTheme() {
   const html = document.documentElement;
-  if (html.classList.contains('dark')) {
-    html.classList.remove('dark');
-    localStorage.theme = 'light';
-  } else {
-    html.classList.add('dark');
-    localStorage.theme = 'dark';
-  }
+  if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.theme = 'light'; }
+  else { html.classList.add('dark'); localStorage.theme = 'dark'; }
 }
 
 window.openTasksModal = function() {
   const el = document.getElementById('tasks-modal');
-  if (el && el._x_dataStack) {
-    const data = el._x_dataStack[0];
-    data.open = true;
-    data.loadTasks();
-  }
+  if (el && el._x_dataStack) { const d = el._x_dataStack[0]; d.open = true; d.loadTasks(); }
 };
-
 window.openMarketModal = function() {
   const el = document.getElementById('market-modal');
-  if (el && el._x_dataStack) {
-    const data = el._x_dataStack[0];
-    data.open = true;
-    data.loadPanels();
-  }
+  if (el && el._x_dataStack) { const d = el._x_dataStack[0]; d.open = true; d.loadPanels(); }
 };
 
-// Icon to emoji mapping
 const iconEmojis = {
-  'check-square': '✅',
-  'cloud': '🌤️',
-  'globe': '🌐',
-  'play': '▶️',
-  'image': '🖼️',
-  'calendar': '📅',
-  'clock': '⏰',
-  'default': '📦'
+  'check-square': '✅', 'cloud': '🌤️', 'globe': '🌐', 'play': '▶️',
+  'image': '🖼️', 'calendar': '📅', 'clock': '⏰', 'default': '📦'
 };
 
-// Global panelAction function for template handlers
 async function panelAction(panelId, action, payload = {}) {
   try {
     const target = document.querySelector(`#panel-${panelId} .card-content`);
     if (!target) return;
-    // POST body as JSON, HTMX swaps the returned HTML into .card-content
     const res = await fetch(`/api/panels/${panelId}/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, payload })
     });
-    if (res.ok) {
-      target.innerHTML = await res.text();
-    }
-  } catch (e) {
-    console.error(`Panel action failed: ${panelId}/${action}`, e);
-  }
+    if (res.ok) target.innerHTML = await res.text();
+  } catch (e) { console.error(`Panel action failed: ${panelId}/${action}`, e); }
 }
 window.panelAction = panelAction;
 
-// Tasks Modal Alpine component
+// ============================================
+// Alpine components
+// ============================================
 document.addEventListener('alpine:init', () => {
+
+  Alpine.data('dashboardSidebar', () => ({
+    drawerOpen: false,
+    showCreateModal: false,
+    newDashboardName: '',
+    currentDashboardId: '{{ dashboard_id }}',
+    dashboards: {{ dashboards | tojson }},
+    allPanels: {{ all_panels | tojson }},
+
+    init() {
+      // When drawer opens, set up GridStack external drag on the panel items
+      this.$watch('drawerOpen', (open) => {
+        if (open) {
+          this.$nextTick(() => { window.setupDrawerDrag && window.setupDrawerDrag(); });
+        }
+      });
+    },
+
+    get generatedId() {
+      const name = this.newDashboardName.trim();
+      if (!name) return '...';
+      const slug = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim().toLowerCase().replace(/[\s-]+/g, '-');
+      return slug || ('db-' + Date.now().toString(36));
+    },
+
+    panelW(p) { return parseInt((p.size || '3x2').split('x')[0]) || 3; },
+    panelH(p) { return parseInt((p.size || '3x2').split('x')[1]) || 2; },
+
+    // --- Dashboard switching (HTMX partial swap, no full page reload) ---
+    switchDashboard(id) {
+      this.currentDashboardId = id;
+      this.drawerOpen = false;
+      htmx.ajax('GET', '/d/' + id + '/content', { target: '#dashboard-content', swap: 'innerHTML' });
+      history.pushState({ dashboardId: id }, '', '/d/' + id);
+    },
+
+    // --- Create dashboard ---
+    openCreateModal() {
+      this.newDashboardName = '';
+      this.showCreateModal = true;
+      this.$nextTick(() => { this.$refs.dashboardNameInput?.focus(); });
+    },
+
+    async submitCreateDashboard() {
+      const name = this.newDashboardName.trim();
+      if (!name) return;
+      const slug = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim().toLowerCase().replace(/[\s-]+/g, '-');
+      const id = slug || ('db-' + Date.now().toString(36));
+      await fetch('/api/dashboards', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name })
+      });
+      this.dashboards.push({ id, name, panel_count: 0 });
+      this.showCreateModal = false;
+      this.switchDashboard(id);
+    },
+
+    // --- Panel drawer actions ---
+    addPanel(panelId) {
+      const did = this.currentDashboardId;
+      fetch('/api/panels/' + panelId + '/add-to-dashboard?dashboard_id=' + did, { method: 'POST' });
+      window.debouncedDashboardRefresh();
+    },
+  }));
+
   Alpine.data('tasksModal', () => ({
-    open: false,
-    loading: false,
-    tasks: [],
-    runningTask: null,
-    
+    open: false, loading: false, tasks: [], runningTask: null,
     async loadTasks() {
       this.loading = true;
-      try {
-        const res = await fetch('/api/tasks');
-        this.tasks = await res.json();
-      } catch (e) {
-        console.error('Failed to load tasks:', e);
-      } finally {
-        this.loading = false;
-      }
+      try { const res = await fetch('/api/tasks'); this.tasks = await res.json(); }
+      catch (e) { console.error('Failed to load tasks:', e); }
+      finally { this.loading = false; }
     },
-    
     async runTask(taskId) {
       this.runningTask = taskId;
       try {
+        const did = document.querySelector('[data-dashboard-id]')?.dataset.dashboardId || 'default';
         const res = await fetch(`/api/tasks/${taskId}/run`, { method: 'POST' });
         if (res.ok) {
           const task = this.tasks.find(t => t.id === taskId);
           if (task) task.last_run = new Date().toISOString();
-          htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' });
+          htmx.ajax('GET', `/d/${did}/panels`, { target: '#dashboard-panels', swap: 'innerHTML' });
         }
-      } catch (e) {
-        console.error('Failed to run task:', e);
-      } finally {
-        this.runningTask = null;
-      }
+      } catch (e) { console.error('Failed to run task:', e); }
+      finally { this.runningTask = null; }
     },
-    
-    formatTime(isoString) {
-      if (!isoString) return '';
-      const d = new Date(isoString);
-      return d.toLocaleString();
-    }
+    formatTime(s) { return s ? new Date(s).toLocaleString() : ''; }
   }));
-  
+
   Alpine.data('marketModal', () => ({
-    open: false,
-    loading: false,
-    panels: [],
-    installing: null,
-    error: null,
-    
+    open: false, loading: false, panels: [], installing: null, error: null,
     async loadPanels() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const res = await fetch('/api/market');
-        this.panels = await res.json();
-      } catch (e) {
-        console.error('Failed to load market:', e);
-      } finally {
-        this.loading = false;
-      }
+      this.loading = true; this.error = null;
+      try { const res = await fetch('/api/market'); this.panels = await res.json(); }
+      catch (e) { console.error('Failed to load market:', e); }
+      finally { this.loading = false; }
     },
-    
-    getEmoji(icon) {
-      return iconEmojis[icon] || iconEmojis.default;
-    },
-    
+    getEmoji(icon) { return iconEmojis[icon] || iconEmojis.default; },
     async installDirect(panel) {
-      this.installing = panel.id;
-      this.error = null;
+      this.installing = panel.id; this.error = null;
       try {
-        const res = await fetch(`/api/market/${panel.id}/install`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+        const did = document.querySelector('[data-dashboard-id]')?.dataset.dashboardId || 'default';
+        const res = await fetch(`/api/market/${panel.id}/install?dashboard_id=${did}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
         });
         const result = await res.json();
         if (result.success) {
           this.open = false;
-          // Refresh dashboard
-          htmx.ajax('GET', '/dashboard-panels', { target: '#dashboard-panels', swap: 'innerHTML' });
-        } else {
-          this.error = result.error || 'Failed to install panel';
-        }
-      } catch (e) {
-        this.error = e.message;
-      } finally {
-        this.installing = null;
-      }
+          htmx.ajax('GET', `/d/${did}/panels`, { target: '#dashboard-panels', swap: 'innerHTML' });
+        } else { this.error = result.error || 'Failed to install panel'; }
+      } catch (e) { this.error = e.message; }
+      finally { this.installing = null; }
     }
   }));
 });

@@ -234,12 +234,14 @@ export function createChatBoxComponent(options = {}) {
       this.abortController = new AbortController()
 
       try {
+        const dashboardId = document.querySelector('[data-dashboard-id]')?.dataset.dashboardId || 'default'
         const response = await fetch('/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: userMessage,
-            session_id: this.sessionId
+            session_id: this.sessionId,
+            dashboard_id: dashboardId
           }),
           signal: this.abortController.signal
         })

@@ -1,0 +1,16 @@
+{# Dashboard main content partial — swapped via HTMX on dashboard switch #}
+<main data-dashboard-id="{{ dashboard_id }}" class="flex-1 overflow-y-auto pt-3 pb-32">
+  <div id="dashboard-panels"
+       class="grid-stack"
+       hx-get="/d/{{ dashboard_id }}/panels"
+       hx-trigger="refresh from:body">
+    {% for panel in panels %}
+      {% include "partials/panel.html" %}
+    {% else %}
+      <div class="w-full text-center py-16" style="color: var(--kb-text-faint); grid-column: span 12;">
+        <p class="text-sm">No panels yet</p>
+        <p class="text-xs mt-2" style="color: var(--kb-text-ghost);">Chat with the assistant or drag panels from the drawer</p>
+      </div>
+    {% endfor %}
+  </div>
+</main>

@@ -149,11 +149,13 @@ Colors: gray, red, orange, amber, green, teal, cyan, blue, indigo, purple, pink,
         x: Type.Number({ description: "Column (0-indexed)" }),
         y: Type.Number({ description: "Row (0-indexed)" }),
       })),
+      dashboardId: Type.Optional(Type.String({ description: "Target dashboard ID (from system context)" })),
     }),
 
     async execute(_toolCallId: string, params: any) {
       try {
-        const response = await fetch(`${DASHBOARD_API}/api/panels`, {
+        const qs = params.dashboardId ? `?dashboard_id=${params.dashboardId}` : '';
+        const response = await fetch(`${DASHBOARD_API}/api/panels${qs}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
