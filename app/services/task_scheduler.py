@@ -1,10 +1,9 @@
 """Task scheduler - runs scheduled tasks using APScheduler."""
 
 import logging
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-
-from app.services import tasks_v2 as task_service
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,10 @@ def get_scheduler() -> AsyncIOScheduler:
 
 async def run_scheduled_task(task_id: str):
     """Execute a scheduled task."""
+    from app.services import tasks_v2 as task_service
+
     logger.info(f"Running scheduled task: {task_id}")
-    result = task_service.execute_task(task_id)
+    result = await task_service.execute_task(task_id)
     if result["success"]:
         logger.info(f"Task {task_id} completed successfully")
     else:
@@ -34,14 +35,10 @@ def schedule_task(task_id: str, cron_expr: str):
     """Add a task to the scheduler."""
     scheduler = get_scheduler()
     job_id = f"task_{task_id}"
-    
-    # Remove existing job if any
+
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
-    
-    # Parse cron expression
-    # 5 parts: minute hour day month day_of_week
-    # 6 parts: second minute hour day month day_of_week
+
     parts = cron_expr.split()
     if len(parts) == 6:
         trigger = CronTrigger(
@@ -83,25 +80,25 @@ def unschedule_task(task_id: str):
         logger.info(f"Unscheduled task {task_id}")
 
 
-def reload_all_tasks():
+async def reload_all_tasks():
     """Reload all scheduled tasks from database."""
+    from app.services import tasks_v2 as task_service
+
     scheduler = get_scheduler()
-    
-    # Remove all existing task jobs
+
     for job in scheduler.get_jobs():
         if job.id.startswith("task_"):
             scheduler.remove_job(job.id)
-    
-    # Add all enabled tasks with schedules
-    for task in task_service.get_scheduled_tasks():
+
+    for task in await task_service.get_scheduled_tasks():
         schedule_task(task["id"], task["schedule"])
 
 
-def start_scheduler():
+async def start_scheduler():
     """Start the scheduler and load all tasks."""
     scheduler = get_scheduler()
     if not scheduler.running:
-        reload_all_tasks()
+        await reload_all_tasks()
         scheduler.start()
         logger.info("Task scheduler started")
 

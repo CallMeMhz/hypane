@@ -1,18 +1,17 @@
 """Panel service v2 - with storage binding support."""
 
-from pathlib import Path
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
 
 from app.models.panel import Panel
-from app.models.storage import Storage
-from app.sandbox import get_executor, HandlerContext, HandlerEvent, EventType
+from app.sandbox import EventType, HandlerContext, HandlerEvent, get_executor
 from app.services.storage import load_storages_for_context, save_storages_from_context
 
 
-def _merge_layout(panel_dict: dict) -> dict:
+async def _merge_layout(panel_dict: dict) -> dict:
     """Merge dashboard layout position/size into panel dict."""
     from app.services.dashboard import get_panel_layout
-    layout = get_panel_layout(panel_dict["id"])
+
+    layout = await get_panel_layout(panel_dict["id"])
     if layout:
         panel_dict["position"] = layout.get("position", {"x": 0, "y": 0})
         panel_dict["size"] = layout.get("size", panel_dict.get("size", "3x2"))
@@ -21,18 +20,19 @@ def _merge_layout(panel_dict: dict) -> dict:
     return panel_dict
 
 
-def list_panels() -> list[dict]:
+async def list_panels() -> list[dict]:
     """List all panels with layout positions."""
-    return [_merge_layout(p.to_dict()) for p in Panel.list_all()]
+    panels = await Panel.list_all()
+    return [await _merge_layout(p.to_dict()) for p in panels]
 
 
-def get_panel(panel_id: str) -> dict | None:
+async def get_panel(panel_id: str) -> dict | None:
     """Get panel by ID with layout position."""
-    p = Panel.load(panel_id)
-    return _merge_layout(p.to_dict()) if p else None
+    p = await Panel.load(panel_id)
+    return await _merge_layout(p.to_dict()) if p else None
 
 
-def create_panel(
+async def create_panel(
     panel_id: str,
     title: str = "Untitled",
     icon: str = "cube",
@@ -54,22 +54,18 @@ def create_panel(
         size=size,
         minSize=minSize,
         storage_ids=storage_ids or [],
+        facade=template,
+        handler=handler,
     )
-    p.save()
-    
-    if template:
-        p.set_template(template)
-    if handler:
-        p.set_handler(handler)
-    
+    await p.save()
     return p.to_dict()
 
 
-def update_panel(panel_id: str, updates: dict) -> dict | None:
+async def update_panel(panel_id: str, updates: dict) -> dict | None:
     """Update panel metadata. Position/size changes sync to dashboard layout."""
     from app.services.dashboard import update_panel_layout
 
-    p = Panel.load(panel_id)
+    p = await Panel.load(panel_id)
     if not p:
         return None
 
@@ -77,55 +73,46 @@ def update_panel(panel_id: str, updates: dict) -> dict | None:
         if key in updates:
             setattr(p, key, updates[key])
 
-    p.save()
+    await p.save()
 
-    # Sync position/size to dashboard layout
     if "position" in updates or "size" in updates:
-        update_panel_layout(
+        await update_panel_layout(
             panel_id,
             position=updates.get("position"),
             size=updates.get("size"),
         )
 
-    return _merge_layout(p.to_dict())
+    return await _merge_layout(p.to_dict())
 
 
-def delete_panel(panel_id: str) -> bool:
+async def delete_panel(panel_id: str) -> bool:
     """Delete a panel."""
-    p = Panel.load(panel_id)
+    p = await Panel.load(panel_id)
     if not p:
         return False
-    return p.delete()
+    return await p.delete()
 
 
-def render_panel(panel_id: str) -> str | None:
-    """
-    Render panel template with storage context.
-    
-    Returns rendered HTML string.
-    """
-    p = Panel.load(panel_id)
+async def render_panel(panel_id: str) -> str | None:
+    """Render panel template with storage context."""
+    p = await Panel.load(panel_id)
     if not p:
         return None
-    
+
     template_str = p.get_template()
     if not template_str:
         return "<div class='text-muted'>No template</div>"
-    
-    # Load storages
-    storage_context = load_storages_for_context(p.storage_ids)
-    
-    # Build Jinja2 context
+
+    storage_context = await load_storages_for_context(p.storage_ids)
+
     context = {
         "panel": p.to_dict(),
-        "storage": storage_context,  # Access via storage['id']['field']
+        "storage": storage_context,
     }
-    # Also add each storage directly for convenience (if ID is valid Python identifier)
     for sid, data in storage_context.items():
         if sid.isidentifier():
             context[sid] = data
-    
-    # Render template
+
     try:
         env = Environment(loader=BaseLoader())
         template = env.from_string(template_str)
@@ -134,29 +121,18 @@ def render_panel(panel_id: str) -> str | None:
         return f"<div class='text-red-500'>Template error: {e}</div>"
 
 
-def execute_action(panel_id: str, action: str, payload: dict | None = None) -> dict:
-    """
-    Execute panel handler action.
-    
-    Returns:
-        {
-            "success": bool,
-            "error": str | None,
-            "html": str | None  # Re-rendered panel HTML
-        }
-    """
-    p = Panel.load(panel_id)
+async def execute_action(panel_id: str, action: str, payload: dict | None = None) -> dict:
+    """Execute panel handler action."""
+    p = await Panel.load(panel_id)
     if not p:
         return {"success": False, "error": "Panel not found"}
-    
+
     handler_code = p.get_handler()
     if not handler_code:
         return {"success": False, "error": "No handler defined"}
-    
-    # Load storages
-    storage_context = load_storages_for_context(p.storage_ids)
-    
-    # Build handler context
+
+    storage_context = await load_storages_for_context(p.storage_ids)
+
     context = HandlerContext(
         panel_id=panel_id,
         storage=storage_context,
@@ -164,20 +140,17 @@ def execute_action(panel_id: str, action: str, payload: dict | None = None) -> d
             type=EventType.ACTION,
             action=action,
             payload=payload or {},
-        )
+        ),
     )
-    
-    # Execute in sandbox
+
     executor = get_executor("simple")
     result = executor.execute(handler_code, context)
-    
+
     if not result.success:
         return {"success": False, "error": result.error}
-    
-    # Save modified storages
-    save_storages_from_context(p.storage_ids, storage_context)
-    
-    # Re-render panel
-    html = render_panel(panel_id)
-    
+
+    await save_storages_from_context(p.storage_ids, storage_context)
+
+    html = await render_panel(panel_id)
+
     return {"success": True, "html": html}

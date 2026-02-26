@@ -1,10 +1,6 @@
 """Panel tools - tools for AI agent to manipulate panels and storages."""
 
-import json
-from datetime import datetime
-
 from .base import ToolDefinition
-
 
 # Tool definitions for panel management
 PANEL_TOOLS = [
@@ -16,15 +12,15 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique storage ID (use lowercase with hyphens, e.g., 'my-todos')"
+                    "description": "Unique storage ID (use lowercase with hyphens, e.g., 'my-todos')",
                 },
                 "data": {
                     "type": "object",
-                    "description": "Initial data for the storage"
-                }
+                    "description": "Initial data for the storage",
+                },
             },
-            "required": ["id"]
-        }
+            "required": ["id"],
+        },
     ),
     ToolDefinition(
         name="update_storage",
@@ -34,20 +30,20 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Storage ID to update"
+                    "description": "Storage ID to update",
                 },
                 "data": {
                     "type": "object",
-                    "description": "New data to merge/replace"
+                    "description": "New data to merge/replace",
                 },
                 "replace": {
                     "type": "boolean",
                     "description": "If true, replace all data. If false, merge with existing.",
-                    "default": False
-                }
+                    "default": False,
+                },
             },
-            "required": ["id", "data"]
-        }
+            "required": ["id", "data"],
+        },
     ),
     ToolDefinition(
         name="create_panel",
@@ -57,40 +53,40 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique panel ID"
+                    "description": "Unique panel ID",
                 },
                 "title": {
                     "type": "string",
-                    "description": "Panel title displayed in header"
+                    "description": "Panel title displayed in header",
                 },
                 "icon": {
                     "type": "string",
-                    "description": "Lucide icon name (e.g., 'check-square', 'cloud', 'list')"
+                    "description": "Lucide icon name (e.g., 'check-square', 'cloud', 'list')",
                 },
                 "desc": {
                     "type": "string",
-                    "description": "Description of what this panel does (for AI reference)"
+                    "description": "Description of what this panel does (for AI reference)",
                 },
                 "size": {
                     "type": "string",
-                    "description": "Panel size as WxH (e.g., '3x2', '4x3')"
+                    "description": "Panel size as WxH (e.g., '3x2', '4x3')",
                 },
                 "storage_ids": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "IDs of storages this panel can access"
+                    "description": "IDs of storages this panel can access",
                 },
                 "template": {
                     "type": "string",
-                    "description": "Jinja2 HTML template for rendering the panel"
+                    "description": "Jinja2 HTML template for rendering the panel",
                 },
                 "handler": {
                     "type": "string",
-                    "description": "Python handler code with on_action(action, payload, storage) function"
-                }
+                    "description": "Python handler code with on_action(action, payload, storage) function",
+                },
             },
-            "required": ["id", "title"]
-        }
+            "required": ["id", "title"],
+        },
     ),
     ToolDefinition(
         name="update_panel_template",
@@ -100,15 +96,15 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Panel ID"
+                    "description": "Panel ID",
                 },
                 "template": {
                     "type": "string",
-                    "description": "New Jinja2 HTML template"
-                }
+                    "description": "New Jinja2 HTML template",
+                },
             },
-            "required": ["id", "template"]
-        }
+            "required": ["id", "template"],
+        },
     ),
     ToolDefinition(
         name="update_panel_handler",
@@ -118,15 +114,15 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Panel ID"
+                    "description": "Panel ID",
                 },
                 "handler": {
                     "type": "string",
-                    "description": "Python handler code with on_action function"
-                }
+                    "description": "Python handler code with on_action function",
+                },
             },
-            "required": ["id", "handler"]
-        }
+            "required": ["id", "handler"],
+        },
     ),
     ToolDefinition(
         name="create_task",
@@ -136,56 +132,55 @@ PANEL_TOOLS = [
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "Unique task ID"
+                    "description": "Unique task ID",
                 },
                 "name": {
                     "type": "string",
-                    "description": "Task name"
+                    "description": "Task name",
                 },
                 "schedule": {
                     "type": "string",
-                    "description": "Cron expression (minute hour day month weekday), e.g., '0 * * * *' for hourly"
+                    "description": "Cron expression (minute hour day month weekday), e.g., '0 * * * *' for hourly",
                 },
                 "storage_ids": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "IDs of storages this task can access"
+                    "description": "IDs of storages this task can access",
                 },
                 "handler": {
                     "type": "string",
-                    "description": "Python handler code with on_schedule(storage) function"
-                }
+                    "description": "Python handler code with on_schedule(storage) function",
+                },
             },
-            "required": ["id", "name", "schedule"]
-        }
+            "required": ["id", "name", "schedule"],
+        },
     ),
 ]
 
 
 async def execute_panel_tool(tool_name: str, args: dict) -> str:
     """Execute a panel tool and return result."""
-    from app.services import storage as storage_service
-    from app.services import panels_v2 as panel_service
-    from app.services import tasks_v2 as task_service
     from app.models.panel import Panel
-    from app.models.task import Task
-    
+    from app.services import panels_v2 as panel_service
+    from app.services import storage as storage_service
+    from app.services import tasks_v2 as task_service
+
     try:
         if tool_name == "create_storage":
-            result = storage_service.create_storage(args["id"], args.get("data", {}))
+            result = await storage_service.create_storage(args["id"], args.get("data", {}))
             return f"Created storage '{args['id']}'"
-        
+
         elif tool_name == "update_storage":
             if args.get("replace"):
-                result = storage_service.update_storage(args["id"], args["data"])
+                result = await storage_service.update_storage(args["id"], args["data"])
             else:
-                result = storage_service.patch_storage(args["id"], args["data"])
+                result = await storage_service.patch_storage(args["id"], args["data"])
             if result:
                 return f"Updated storage '{args['id']}'"
             return f"Storage '{args['id']}' not found"
-        
+
         elif tool_name == "create_panel":
-            result = panel_service.create_panel(
+            result = await panel_service.create_panel(
                 panel_id=args["id"],
                 title=args.get("title", "Untitled"),
                 icon=args.get("icon", "cube"),
@@ -196,23 +191,23 @@ async def execute_panel_tool(tool_name: str, args: dict) -> str:
                 handler=args.get("handler", ""),
             )
             return f"Created panel '{args['id']}'"
-        
+
         elif tool_name == "update_panel_template":
-            panel = Panel.load(args["id"])
+            panel = await Panel.load(args["id"])
             if not panel:
                 return f"Panel '{args['id']}' not found"
-            panel.set_template(args["template"])
+            await panel.set_template(args["template"])
             return f"Updated template for panel '{args['id']}'"
-        
+
         elif tool_name == "update_panel_handler":
-            panel = Panel.load(args["id"])
+            panel = await Panel.load(args["id"])
             if not panel:
                 return f"Panel '{args['id']}' not found"
-            panel.set_handler(args["handler"])
+            await panel.set_handler(args["handler"])
             return f"Updated handler for panel '{args['id']}'"
-        
+
         elif tool_name == "create_task":
-            result = task_service.create_task(
+            result = await task_service.create_task(
                 task_id=args["id"],
                 name=args.get("name", "Untitled"),
                 schedule=args.get("schedule", ""),
@@ -220,9 +215,9 @@ async def execute_panel_tool(tool_name: str, args: dict) -> str:
                 handler=args.get("handler", ""),
             )
             return f"Created task '{args['id']}'"
-        
+
         else:
             return f"Unknown tool: {tool_name}"
-            
+
     except Exception as e:
         return f"Error executing {tool_name}: {str(e)}"

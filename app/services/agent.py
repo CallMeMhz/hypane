@@ -1,46 +1,29 @@
 import asyncio
 import json
-import os
 import subprocess
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 from typing import AsyncIterator, Optional
 
-from app.config import PI_COMMAND, SKILLS, SESSIONS_DIR, DASHBOARD_EXTENSION, BASE_DIR
+from app.config import BASE_DIR, DASHBOARD_EXTENSION, PI_COMMAND, SESSIONS_DIR, SKILLS
 from app.services.dashboard import get_dashboard
+from app.services.tasks_v2 import get_scheduled_tasks
 
 # 增大行缓冲区限制到 10MB
 STREAM_LIMIT = 10 * 1024 * 1024
 
-# Tasks file path
-TASKS_FILE = Path("data/tasks.json")
 
-
-def get_scheduled_tasks() -> list:
-    """Load scheduled tasks from tasks.json."""
-    if not TASKS_FILE.exists():
-        return []
-    try:
-        with open(TASKS_FILE) as f:
-            data = json.load(f)
-            return data.get("tasks", [])
-    except:
-        return []
-
-
-def get_system_context() -> str:
+async def get_system_context() -> str:
     """Generate system context with current time, dashboard outline, and scheduled tasks."""
     now = datetime.now()
-    utc_now = datetime.now(timezone.utc)
-    
+
     # Time
     lines = [f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} (local)"]
-    
+
     # Dashboard outline
-    dashboard = get_dashboard()
+    dashboard = await get_dashboard()
     panels = dashboard.get("panels", [])
-    
+
     if panels:
         lines.append(f"\nDashboard ({len(panels)} panels):")
         for i, panel in enumerate(panels):
@@ -52,18 +35,16 @@ def get_system_context() -> str:
             lines.append(f"  {i+1}. [{panel_id}] {panel_title} ({panel_size}){desc_str}")
     else:
         lines.append("\nDashboard: empty (no panels)")
-    
+
     # Scheduled tasks
-    tasks = get_scheduled_tasks()
+    tasks = await get_scheduled_tasks()
     if tasks:
         lines.append(f"\nScheduled Tasks ({len(tasks)}):")
         for task in tasks:
-            status = "enabled" if task.get("enabled", True) else "disabled"
-            task_type = task.get("type", "?")
             schedule = task.get("schedule", "?")
             name = task.get("name", task.get("id", "?"))
-            lines.append(f"  - {name} [{task_type}] schedule=\"{schedule}\" ({status})")
-    
+            lines.append(f"  - {name} schedule=\"{schedule}\"")
+
     return "\n".join(lines)
 
 
@@ -135,7 +116,7 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
         session_file = None
 
     # Prepend system context to message
-    system_context = get_system_context()
+    system_context = await get_system_context()
     full_message = f"[{system_context}]\n\n{message}"
 
     cmd = [
@@ -255,7 +236,7 @@ async def run_agent_stream(message: str, session_id: Optional[str] = None) -> As
                 
                 # Retry events
                 elif event_type == "auto_retry_start":
-                    print(f"[DEBUG] auto_retry_start", file=sys.stderr)
+                    print("[DEBUG] auto_retry_start", file=sys.stderr)
                     yield f"data: {json.dumps({'type': 'status', 'message': '遇到错误，正在重试...'})}\n\n"
                 
                 elif event_type == "auto_retry_end":

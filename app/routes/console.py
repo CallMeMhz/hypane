@@ -18,11 +18,10 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 @router.get("/console", response_class=HTMLResponse)
 async def console_page(request: Request):
     """Render the resource console page."""
-    panels = panels_v2.list_panels()
-    storages = storage_service.list_storages()
-    tasks = task_service.list_tasks()
+    panels = await panels_v2.list_panels()
+    storages = await storage_service.list_storages()
+    tasks = await task_service.list_tasks()
 
-    # Build reverse map: storage_id → list of {type, id, name} that reference it
     storage_refs: dict[str, list[dict]] = defaultdict(list)
     for p in panels:
         for sid in p.get("storage_ids", []):
@@ -35,7 +34,6 @@ async def console_page(request: Request):
                 {"type": "task", "id": t["id"], "name": t.get("name", t["id"])}
             )
 
-    # Mark orphan storages (not referenced by any panel or task)
     all_storage_ids = {s["id"] for s in storages}
     referenced_ids = set(storage_refs.keys())
     orphan_ids = all_storage_ids - referenced_ids

@@ -1,11 +1,46 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app import config, db
 from app.config import STATIC_DIR, TEMPLATES_DIR
-from app.routes import dashboard, console, chat, history, sessions, panels, api_panels, api_market, api_storage, api_tasks, api_agent
+from app.routes import (
+    api_agent,
+    api_market,
+    api_panels,
+    api_storage,
+    api_tasks,
+    chat,
+    console,
+    dashboard,
+    history,
+    panels,
+    sessions,
+)
 
-app = FastAPI(title="AI Dashboard")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    await db.connect(config.MONGO_DSN, config.MONGODB_DB)
+
+    from app.migrate import migrate_files_to_mongo
+    await migrate_files_to_mongo()
+
+    from app.services.task_scheduler import start_scheduler
+    await start_scheduler()
+
+    yield
+
+    # Shutdown
+    from app.services.task_scheduler import stop_scheduler
+    stop_scheduler()
+    await db.close()
+
+
+app = FastAPI(title="AI Dashboard", lifespan=lifespan)
 
 # Static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -25,18 +60,3 @@ app.include_router(api_agent.router)
 app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(sessions.router)
-
-
-# Lifecycle events
-@app.on_event("startup")
-async def startup_event():
-    """Start task scheduler on app startup."""
-    from app.services.task_scheduler import start_scheduler
-    start_scheduler()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Stop task scheduler on app shutdown."""
-    from app.services.task_scheduler import stop_scheduler
-    stop_scheduler()

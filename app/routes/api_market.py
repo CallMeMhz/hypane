@@ -1,16 +1,17 @@
 """Panel Market API"""
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from typing import Optional
 
-from app.services.market import (
-    list_market_panels,
-    get_market_panel,
-    search_market,
-    install_market_panel,
-)
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
 from app.services.dashboard import add_panel_to_layout
+from app.services.market import (
+    get_market_panel,
+    install_market_panel,
+    list_market_panels,
+    search_market,
+)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -39,46 +40,41 @@ async def get_panel_template(panel_type: str):
 class InstallRequest(BaseModel):
     title: Optional[str] = None
     size: Optional[str] = None
-    storage: Optional[dict] = None  # storage overrides
+    storage: Optional[dict] = None
 
 
 @router.post("/{panel_type}/install")
 async def install_panel(panel_type: str, request: InstallRequest):
     """从市场安装 Panel"""
-    from datetime import datetime
     import random
-    
-    # 获取模板信息
+    from datetime import datetime
+
     template = get_market_panel(panel_type)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
-    
-    # 生成 panel ID
+
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    suffix = format(random.randint(0, 0xFFFF), '04x')
+    suffix = format(random.randint(0, 0xFFFF), "04x")
     panel_id = f"{panel_type}-{timestamp}-{suffix}"
-    
-    # 使用提供的 title 或模板默认名称
+
     title = request.title or template.get("name", panel_type)
-    
-    # 安装
-    result = install_market_panel(
+
+    result = await install_market_panel(
         panel_type=panel_type,
         panel_id=panel_id,
         title=title,
         storage_overrides=request.storage,
     )
-    
+
     if not result:
         raise HTTPException(status_code=400, detail="Failed to install panel")
-    
+
     size = request.size or template.get("defaultSize", "3x2")
-    
-    # 添加到 layout
-    add_panel_to_layout(panel_id, size=size)
-    
+
+    await add_panel_to_layout(panel_id, size=size)
+
     return {
         "success": True,
         "panelId": panel_id,
-        "message": f"Installed {panel_type} panel as {panel_id}"
+        "message": f"Installed {panel_type} panel as {panel_id}",
     }

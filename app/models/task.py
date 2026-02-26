@@ -1,36 +1,25 @@
-"""Task model - scheduled job with handler."""
+"""Task model - scheduled job with handler (MongoDB)."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
-import json
-from pathlib import Path
 
-TASK_DIR = Path("data/tasks")
+from app import db
 
 
 @dataclass
 class Task:
     id: str
     name: str = "Untitled Task"
-    schedule: str = ""  # Cron expression, empty = disabled
+    schedule: str = ""
     storage_ids: list[str] = field(default_factory=list)
     enabled: bool = True
+    handler: str = ""
+    user_id: str = "default"
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     last_run: datetime | None = None
-    
-    @property
-    def dir(self) -> Path:
-        return TASK_DIR / self.id
-    
-    @property
-    def metadata_path(self) -> Path:
-        return self.dir / "metadata.json"
-    
-    @property
-    def handler_path(self) -> Path:
-        return self.dir / "handler.py"
-    
+    deleted_at: datetime | None = None
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -42,67 +31,74 @@ class Task:
             "updated_at": self.updated_at.isoformat(),
             "last_run": self.last_run.isoformat() if self.last_run else None,
         }
-    
+
+    def _to_doc(self) -> dict:
+        """Convert to MongoDB document."""
+        return {
+            "_id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "schedule": self.schedule,
+            "storage_ids": self.storage_ids,
+            "enabled": self.enabled,
+            "handler": self.handler,
+            "last_run": self.last_run,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "deleted_at": self.deleted_at,
+        }
+
     @classmethod
-    def from_dict(cls, d: dict) -> "Task":
+    def _from_doc(cls, doc: dict) -> "Task":
+        """Create from MongoDB document."""
         return cls(
-            id=d["id"],
-            name=d.get("name", "Untitled Task"),
-            schedule=d.get("schedule", ""),
-            storage_ids=d.get("storage_ids", []),
-            enabled=d.get("enabled", True),
-            created_at=datetime.fromisoformat(d["created_at"]) if "created_at" in d else datetime.now(),
-            updated_at=datetime.fromisoformat(d["updated_at"]) if "updated_at" in d else datetime.now(),
-            last_run=datetime.fromisoformat(d["last_run"]) if d.get("last_run") else None,
+            id=doc["_id"],
+            name=doc.get("name", "Untitled Task"),
+            schedule=doc.get("schedule", ""),
+            storage_ids=doc.get("storage_ids", []),
+            enabled=doc.get("enabled", True),
+            handler=doc.get("handler", ""),
+            user_id=doc.get("user_id", "default"),
+            created_at=doc.get("created_at") or datetime.now(),
+            updated_at=doc.get("updated_at") or datetime.now(),
+            last_run=doc.get("last_run"),
+            deleted_at=doc.get("deleted_at"),
         )
-    
-    def save(self) -> None:
-        """Save task metadata."""
-        self.dir.mkdir(parents=True, exist_ok=True)
+
+    async def save(self) -> None:
+        """Save task to MongoDB."""
         self.updated_at = datetime.now()
-        self.metadata_path.write_text(json.dumps(self.to_dict(), indent=2, ensure_ascii=False))
-    
+        await db.tasks_col().update_one(
+            {"_id": self.id},
+            {"$set": self._to_doc()},
+            upsert=True,
+        )
+
     def get_handler(self) -> str:
         """Get task handler code."""
-        if self.handler_path.exists():
-            return self.handler_path.read_text()
-        return ""
-    
-    def set_handler(self, code: str) -> None:
+        return self.handler
+
+    async def set_handler(self, code: str) -> None:
         """Set task handler code."""
-        self.dir.mkdir(parents=True, exist_ok=True)
-        self.handler_path.write_text(code)
-        self.updated_at = datetime.now()
-        self.save()
-    
+        self.handler = code
+        await self.save()
+
     @classmethod
-    def load(cls, task_id: str) -> "Task | None":
-        """Load task from directory."""
-        metadata_path = TASK_DIR / task_id / "metadata.json"
-        if not metadata_path.exists():
-            return None
-        return cls.from_dict(json.loads(metadata_path.read_text()))
-    
+    async def load(cls, task_id: str) -> "Task | None":
+        """Load task from MongoDB."""
+        doc = await db.tasks_col().find_one({"_id": task_id, "deleted_at": None})
+        return cls._from_doc(doc) if doc else None
+
     @classmethod
-    def list_all(cls) -> list["Task"]:
-        """List all tasks."""
-        TASK_DIR.mkdir(parents=True, exist_ok=True)
-        tasks = []
-        for path in TASK_DIR.iterdir():
-            if path.is_dir():
-                task = cls.load(path.name)
-                if task:
-                    tasks.append(task)
-        return tasks
-    
-    def delete(self) -> bool:
-        """Soft-delete task directory (move to trash)."""
-        import shutil
-        if not self.dir.exists():
-            return False
-        trash = Path("data/_trash/tasks") / self.id
-        trash.parent.mkdir(parents=True, exist_ok=True)
-        if trash.exists():
-            shutil.rmtree(trash)
-        shutil.move(str(self.dir), str(trash))
-        return True
+    async def list_all(cls, user_id: str = "default") -> list["Task"]:
+        """List all tasks for a user."""
+        cursor = db.tasks_col().find({"user_id": user_id, "deleted_at": None})
+        return [cls._from_doc(doc) async for doc in cursor]
+
+    async def delete(self) -> bool:
+        """Soft-delete task."""
+        result = await db.tasks_col().update_one(
+            {"_id": self.id, "deleted_at": None},
+            {"$set": {"deleted_at": datetime.now()}},
+        )
+        return result.modified_count > 0

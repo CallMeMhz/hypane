@@ -24,13 +24,13 @@ class PatchStorageRequest(BaseModel):
 @router.get("")
 async def list_storages():
     """List all storages."""
-    return storage_service.list_storages()
+    return await storage_service.list_storages()
 
 
 @router.get("/{storage_id}")
 async def get_storage(storage_id: str):
     """Get a storage by ID."""
-    s = storage_service.get_storage(storage_id)
+    s = await storage_service.get_storage(storage_id)
     if not s:
         raise HTTPException(status_code=404, detail="Storage not found")
     return s
@@ -39,16 +39,15 @@ async def get_storage(storage_id: str):
 @router.post("")
 async def create_storage(request: CreateStorageRequest):
     """Create a new storage."""
-    # Check if already exists
-    if storage_service.get_storage(request.id):
+    if await storage_service.get_storage(request.id):
         raise HTTPException(status_code=409, detail="Storage already exists")
-    return storage_service.create_storage(request.id, request.data)
+    return await storage_service.create_storage(request.id, request.data)
 
 
 @router.put("/{storage_id}")
 async def update_storage(storage_id: str, request: UpdateStorageRequest):
     """Update storage data (full replace)."""
-    s = storage_service.update_storage(storage_id, request.data)
+    s = await storage_service.update_storage(storage_id, request.data)
     if not s:
         raise HTTPException(status_code=404, detail="Storage not found")
     return s
@@ -57,7 +56,7 @@ async def update_storage(storage_id: str, request: UpdateStorageRequest):
 @router.patch("/{storage_id}")
 async def patch_storage(storage_id: str, request: PatchStorageRequest):
     """Patch storage data (shallow merge)."""
-    s = storage_service.patch_storage(storage_id, request.data)
+    s = await storage_service.patch_storage(storage_id, request.data)
     if not s:
         raise HTTPException(status_code=404, detail="Storage not found")
     return s
@@ -66,6 +65,6 @@ async def patch_storage(storage_id: str, request: PatchStorageRequest):
 @router.delete("/{storage_id}")
 async def delete_storage(storage_id: str):
     """Delete a storage."""
-    if not storage_service.delete_storage(storage_id):
+    if not await storage_service.delete_storage(storage_id):
         raise HTTPException(status_code=404, detail="Storage not found")
     return {"success": True}

@@ -1,4 +1,13 @@
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# MongoDB
+MONGO_DSN = os.environ.get("MONGO_DSN", "")
+MONGODB_DB = os.environ.get("MONGODB_DB", "hypane")
 
 # Paths
 BASE_DIR = Path(__file__).parent.parent
@@ -9,8 +18,7 @@ STATIC_DIR = BASE_DIR / "static"
 EXTENSIONS_DIR = BASE_DIR / "extensions"
 
 # Files
-DASHBOARD_FILE = DATA_DIR / "dashboard.json"
-TASKS_FILE = DATA_DIR / "tasks.json"
+DASHBOARD_FILE = DATA_DIR / "dashboard.json"  # used by migrate.py only
 SESSIONS_DIR = DATA_DIR / "sessions"
 
 # Agent
